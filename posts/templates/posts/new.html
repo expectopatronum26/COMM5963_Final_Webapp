@@ -7,7 +7,7 @@
     <form method="post" action="{{ url_for('posts.new_post') }}">
         <div class="grid grid-2">
             <label>标题 *
-                <input type="text" name="title" value="{{ form.title or '' }}" required>
+                <input type="text" name="title" value="{{ form.title or '' }}" placeholder="请输入标题" required>
             </label>
             <label>租金 *
                 <input type="number" name="rent" min="0" step="1" placeholder="请输入月租金" required>
@@ -35,7 +35,7 @@
                 </select>
             </label>
             <label>小区名称
-                <input type="text" name="community_name" value="{{ form.community_name or '' }}">
+                <input type="text" name="community_name" value="{{ form.community_name or '' }}" placeholder="请输入小区名称">
             </label>
             <label>户型
                 <select name="layout" required>
@@ -48,34 +48,92 @@
                     <option value="其他">其他（劏房/套房等）</option>
                 </select>
             </label>
-            <label>面积
-                <input type="number" step="0.01" name="area" value="{{ form.area or '' }}">
-            </label>
-            <label>发帖人性别
-                <input type="text" name="poster_gender" value="{{ form.poster_gender or '' }}">
-            </label>
-            <label>年龄
-                <input type="number" name="poster_age" value="{{ form.poster_age or '' }}">
-            </label>
-            <label>职业或学校
-                <input type="text" name="poster_occupation_or_school" value="{{ form.poster_occupation_or_school or '' }}">
+            <label>面积（㎡）
+                <input type="number" step="0.01" name="area" value="{{ form.area or '' }}" placeholder="请输入面积">
             </label>
         </div>
 
         <label>个人介绍
-            <textarea name="poster_intro" rows="4">{{ form.poster_intro or '' }}</textarea>
+            <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ form.poster_intro or '' }}</textarea>
         </label>
         <label>期望室友作息时间
-            <input type="text" name="expected_schedule" value="{{ form.expected_schedule or '' }}">
+            <input type="text" name="expected_schedule" value="{{ form.expected_schedule or '' }}" placeholder="例：希望11点前熄灯">
         </label>
-        <label>搞卫生频次
-            <input type="text" name="cleaning_frequency" value="{{ form.cleaning_frequency or '' }}">
+        <label>家务分配
+            <input type="text" name="cleaning_frequency" value="{{ form.cleaning_frequency or '' }}" placeholder="例：每人每周轮流打扫公共区域、倒垃圾">
         </label>
-        <label>家务分配方式
-            <input type="text" name="chore_distribution" value="{{ form.chore_distribution or '' }}">
+        <label>对室友的期望
+            <textarea name="custom_requirements" rows="4" placeholder="例：是否接受宠物、带朋友回家的要求、其他期望~">{{ form.custom_requirements or '' }}</textarea>
         </label>
-        <label>自定义要求
-            <textarea name="custom_requirements" rows="4">{{ form.custom_requirements or '' }}</textarea>
+
+        <label>兴趣爱好
+            <div class="hobby-builder">
+                <div id="hobby-tags" class="hobby-tags"></div>
+                <div class="hobby-controls">
+                    <select id="hobby-emoji" aria-label="选择emoji">
+                        <option value="">选择emoji</option>
+                        <optgroup label="表情">
+                            <option value="😀">😀</option>
+                            <option value="😂">😂</option>
+                            <option value="🥰">🥰</option>
+                            <option value="😎">😎</option>
+                            <option value="😤">😤</option>
+                            <option value="🥺">🥺</option>
+                        </optgroup>
+                        <optgroup label="运动">
+                            <option value="🏃">🏃</option>
+                            <option value="⚽">⚽</option>
+                            <option value="🏀">🏀</option>
+                            <option value="🎾">🎾</option>
+                            <option value="🏊">🏊</option>
+                            <option value="🧘">🧘</option>
+                        </optgroup>
+                        <optgroup label="美食">
+                            <option value="🍜">🍜</option>
+                            <option value="🍕">🍕</option>
+                            <option value="🍣">🍣</option>
+                            <option value="🧋">🧋</option>
+                            <option value="🍰">🍰</option>
+                            <option value="☕">☕</option>
+                        </optgroup>
+                        <optgroup label="娱乐">
+                            <option value="🎮">🎮</option>
+                            <option value="🎵">🎵</option>
+                            <option value="🎬">🎬</option>
+                            <option value="📚">📚</option>
+                            <option value="🎨">🎨</option>
+                            <option value="🎲">🎲</option>
+                        </optgroup>
+                        <optgroup label="旅行">
+                            <option value="✈️">✈️</option>
+                            <option value="🏖️">🏖️</option>
+                            <option value="🗼">🗼</option>
+                            <option value="🏔️">🏔️</option>
+                            <option value="🚗">🚗</option>
+                            <option value="🌍">🌍</option>
+                        </optgroup>
+                        <optgroup label="动物">
+                            <option value="🐱">🐱</option>
+                            <option value="🐶">🐶</option>
+                            <option value="🐰">🐰</option>
+                            <option value="🐹">🐹</option>
+                            <option value="🐟">🐟</option>
+                            <option value="🦋">🦋</option>
+                        </optgroup>
+                        <optgroup label="其他">
+                            <option value="❤️">❤️</option>
+                            <option value="⭐">⭐</option>
+                            <option value="🔥">🔥</option>
+                            <option value="💡">💡</option>
+                            <option value="🎉">🎉</option>
+                            <option value="✨">✨</option>
+                        </optgroup>
+                    </select>
+                    <input id="hobby-text" type="text" placeholder="输入兴趣爱好" aria-label="输入兴趣爱好">
+                    <button id="add-hobby" type="button" class="btn secondary">添加</button>
+                </div>
+                <input id="hobbies-input" type="hidden" name="hobbies" value="{{ form.hobbies or '[]' }}">
+            </div>
         </label>
 
         <div class="card">
@@ -99,4 +157,113 @@
         <a class="btn secondary" href="{{ url_for('posts.list_posts') }}">取消</a>
     </form>
 </div>
+
+<style>
+    .hobby-builder {
+        display: grid;
+        gap: 8px;
+    }
+    .hobby-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+    .hobby-controls select,
+    .hobby-controls input {
+        flex: 1 1 10em;
+    }
+    .hobby-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .hobby-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        background: #f4f4f5;
+        padding: 4px 10px;
+    }
+    .hobby-chip button {
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+    }
+</style>
+
+<script>
+    (function () {
+        var tagsContainer = document.getElementById("hobby-tags");
+        var emojiSelect = document.getElementById("hobby-emoji");
+        var textInput = document.getElementById("hobby-text");
+        var addButton = document.getElementById("add-hobby");
+        var hiddenInput = document.getElementById("hobbies-input");
+        var hobbies = [];
+
+        function syncHiddenInput() {
+            hiddenInput.value = JSON.stringify(hobbies);
+        }
+
+        function renderHobbies() {
+            tagsContainer.innerHTML = "";
+            hobbies.forEach(function (item, index) {
+                var chip = document.createElement("span");
+                chip.className = "hobby-chip";
+
+                var label = document.createElement("span");
+                label.textContent = item.emoji + " " + item.text;
+                chip.appendChild(label);
+
+                var removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.textContent = "✕";
+                removeButton.setAttribute("aria-label", "删除兴趣");
+                removeButton.addEventListener("click", function () {
+                    hobbies.splice(index, 1);
+                    syncHiddenInput();
+                    renderHobbies();
+                });
+                chip.appendChild(removeButton);
+                tagsContainer.appendChild(chip);
+            });
+        }
+
+        function addHobby() {
+            var emoji = emojiSelect.value;
+            var text = (textInput.value || "").trim();
+            if (!emoji || !text) {
+                return;
+            }
+            hobbies.push({ emoji: emoji, text: text });
+            textInput.value = "";
+            syncHiddenInput();
+            renderHobbies();
+        }
+
+        addButton.addEventListener("click", addHobby);
+        textInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                addHobby();
+            }
+        });
+
+        try {
+            var parsed = JSON.parse(hiddenInput.value || "[]");
+            if (Array.isArray(parsed)) {
+                hobbies = parsed.filter(function (item) {
+                    return item && typeof item.emoji === "string" && typeof item.text === "string" && item.emoji && item.text;
+                });
+            }
+        } catch (error) {
+            hobbies = [];
+        }
+        syncHiddenInput();
+        renderHobbies();
+    })();
+</script>
 {% endblock %}

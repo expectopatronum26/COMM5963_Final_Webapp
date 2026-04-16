@@ -116,6 +116,7 @@ def post_detail(post_id):
         "posts/detail.html",
         post=post,
         images=images,
+        hobbies_json=post.hobbies or "[]",
         is_favorite=favorite is not None,
     )
 
@@ -146,7 +147,7 @@ def new_post():
             poster_intro=(request.form.get("poster_intro") or "").strip() or None,
             expected_schedule=(request.form.get("expected_schedule") or "").strip() or None,
             cleaning_frequency=(request.form.get("cleaning_frequency") or "").strip() or None,
-            chore_distribution=(request.form.get("chore_distribution") or "").strip() or None,
+            hobbies=(request.form.get("hobbies") or "").strip() or None,
             custom_requirements=(request.form.get("custom_requirements") or "").strip() or None,
         )
         db.session.add(post)

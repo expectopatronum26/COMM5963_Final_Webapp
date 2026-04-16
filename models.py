@@ -36,17 +36,18 @@ class Post(db.Model):
     community_name = db.Column(db.String(100), nullable=True)
     layout = db.Column(db.String(50), nullable=True)
     area = db.Column(db.Numeric(10, 2), nullable=True)
+    cover_image = db.Column(db.String(500), nullable=True)
     
     # Poster details
     poster_gender = db.Column(db.String(10), nullable=True)
     poster_age = db.Column(db.Integer, nullable=True)
     poster_occupation_or_school = db.Column(db.String(100), nullable=True)
     poster_intro = db.Column(db.Text, nullable=True)
+    hobbies = db.Column(db.Text, nullable=True)  # 存JSON格式的兴趣标签列表
 
     # Roommate expectations
     expected_schedule = db.Column(db.String(100), nullable=True)
     cleaning_frequency = db.Column(db.String(50), nullable=True)
-    chore_distribution = db.Column(db.String(100), nullable=True)
     custom_requirements = db.Column(db.Text, nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

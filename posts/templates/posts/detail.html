@@ -5,7 +5,7 @@
 {% block content %}
 <div class="card">
     <h2>{{ post.title }}</h2>
-    <p class="muted">发布人：{{ post.author.username if post.author else '未知' }} ｜ 发布时间：{{ post.created_at }}</p>
+    <p class="muted">发布人：<a href="/user/{{ post.user_id }}">{{ post.author.username }}</a> ｜ 发布时间：{{ post.created_at }}</p>
 
     <div class="grid grid-2">
         <div>
@@ -23,15 +23,13 @@
             <p><strong>附近学校：</strong>{{ post.nearby_school or '-' }}</p>
             <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
             <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
-            <p><strong>面积：</strong>{{ post.area or '-' }}</p>
-            <p><strong>发帖人性别：</strong>{{ post.poster_gender or '-' }}</p>
-            <p><strong>年龄：</strong>{{ post.poster_age or '-' }}</p>
-            <p><strong>职业或学校：</strong>{{ post.poster_occupation_or_school or '-' }}</p>
+            <p><strong>面积（㎡）：</strong>{{ post.area or '-' }}</p>
             <p><strong>个人介绍：</strong>{{ post.poster_intro or '-' }}</p>
+            <p><strong>兴趣爱好：</strong></p>
+            <div id="hobbies-list" class="hobbies-list"></div>
             <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
-            <p><strong>搞卫生频次：</strong>{{ post.cleaning_frequency or '-' }}</p>
-            <p><strong>家务分配方式：</strong>{{ post.chore_distribution or '-' }}</p>
-            <p><strong>自定义要求：</strong>{{ post.custom_requirements or '-' }}</p>
+            <p><strong>家务分配：</strong>{{ post.cleaning_frequency or '-' }}</p>
+            <p><strong>对室友的期望：</strong>{{ post.custom_requirements or '-' }}</p>
         </div>
     </div>
 
@@ -57,4 +55,57 @@
 </div>
 
 <a href="{{ url_for('posts.list_posts') }}">返回列表</a>
+
+<style>
+    .hobbies-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+    .hobby-card {
+        border-radius: 999px;
+        background: #f4f4f5;
+        padding: 4px 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+</style>
+
+<script>
+    (function () {
+        var container = document.getElementById("hobbies-list");
+        var hobbiesJson = {{ hobbies_json|tojson }};
+        var hobbies = [];
+
+        try {
+            var parsed = JSON.parse(hobbiesJson || "[]");
+            if (Array.isArray(parsed)) {
+                hobbies = parsed;
+            }
+        } catch (error) {
+            hobbies = [];
+        }
+
+        if (!hobbies.length) {
+            container.textContent = "-";
+            return;
+        }
+
+        hobbies.forEach(function (item) {
+            if (!item || !item.emoji || !item.text) {
+                return;
+            }
+            var chip = document.createElement("span");
+            chip.className = "hobby-card";
+            chip.textContent = item.emoji + " " + item.text;
+            container.appendChild(chip);
+        });
+
+        if (!container.childElementCount) {
+            container.textContent = "-";
+        }
+    })();
+</script>
 {% endblock %}

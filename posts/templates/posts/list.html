@@ -59,9 +59,9 @@
             <button type="button" class="rent-tag {% if filters.min_rent == '8000' and filters.max_rent == '10000' %}active{% endif %}" data-min="8000" data-max="10000">8000-10000</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '10000' and filters.max_rent == '15000' %}active{% endif %}" data-min="10000" data-max="15000">10000-15000</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '15000' and filters.max_rent == '' %}active{% endif %}" data-min="15000" data-max="">15000以上</button>
-            <input id="min-rent" class="rent-input" type="number" step="50" name="custom_min_rent" value="{% if filters.min_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.min_rent }}{% endif %}" placeholder="最低" aria-label="最低租金">
+            <input id="min-rent" class="rent-input" type="number" step="100" name="custom_min_rent" value="{% if filters.min_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.min_rent }}{% endif %}" placeholder="最低" aria-label="最低租金">
             <span>-</span>
-            <input id="max-rent" class="rent-input" type="number" step="50" name="custom_max_rent" value="{% if filters.max_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.max_rent }}{% endif %}" placeholder="最高" aria-label="最高租金">
+            <input id="max-rent" class="rent-input" type="number" step="100" name="custom_max_rent" value="{% if filters.max_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.max_rent }}{% endif %}" placeholder="最高" aria-label="最高租金">
             <span>元</span>
         </div>
         <label>户型
