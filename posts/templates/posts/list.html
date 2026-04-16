@@ -65,15 +65,7 @@
             <span>元</span>
         </div>
         <label>户型
-            <select name="layout">
-                <option value="" {% if not filters.layout %}selected{% endif %}>不限</option>
-                <option value="开放式" {% if filters.layout == '开放式' %}selected{% endif %}>开放式 (Studio)</option>
-                <option value="一房" {% if filters.layout == '一房' %}selected{% endif %}>一房</option>
-                <option value="两房" {% if filters.layout == '两房' %}selected{% endif %}>两房</option>
-                <option value="三房" {% if filters.layout == '三房' %}selected{% endif %}>三房</option>
-                <option value="四房及以上" {% if filters.layout == '四房及以上' %}selected{% endif %}>四房及以上</option>
-                <option value="其他" {% if filters.layout == '其他' %}selected{% endif %}>其他（劏房/套房等）</option>
-            </select>
+            <input type="text" name="layout" value="{{ filters.layout }}" placeholder="例如：2室1厅">
         </label>
         <div style="align-self:end;">
             <button class="btn" type="submit">筛选</button>

@@ -36,8 +36,7 @@ class Post(db.Model):
     community_name = db.Column(db.String(100), nullable=True)
     layout = db.Column(db.String(50), nullable=True)
     area = db.Column(db.Numeric(10, 2), nullable=True)
-    cover_image = db.Column(db.String(500), nullable=True)
-    
+
     # Poster details
     poster_gender = db.Column(db.String(10), nullable=True)
     poster_age = db.Column(db.Integer, nullable=True)

@@ -7,30 +7,40 @@
     <h2>{{ post.title }}</h2>
     <p class="muted">发布人：<a href="/user/{{ post.user_id }}">{{ post.author.username }}</a> ｜ 发布时间：{{ post.created_at }}</p>
 
-    <div class="grid grid-2">
-        <div>
+    <div id="post-carousel" class="post-carousel">
+        <div id="carousel-track" class="carousel-track">
             {% if images %}
                 {% for image in images %}
-                    <img class="cover" src="{{ image.image_url }}" alt="帖子图片">
+                    <div class="carousel-slide">
+                        <img src="{{ image.image_url }}" alt="帖子图片">
+                    </div>
                 {% endfor %}
             {% else %}
-                <img class="cover" src="https://picsum.photos/seed/roommate-detail/900/600" alt="默认图片">
+                <div class="carousel-slide">
+                    <img src="https://picsum.photos/seed/roommate-detail/900/600" alt="默认图片">
+                </div>
             {% endif %}
         </div>
-        <div>
-            <p><strong>租金：</strong>{{ post.rent }}</p>
-            <p><strong>位置：</strong>{{ post.location }}</p>
-            <p><strong>附近学校：</strong>{{ post.nearby_school or '-' }}</p>
-            <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
-            <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
-            <p><strong>面积（㎡）：</strong>{{ post.area or '-' }}</p>
-            <p><strong>个人介绍：</strong>{{ post.poster_intro or '-' }}</p>
-            <p><strong>兴趣爱好：</strong></p>
-            <div id="hobbies-list" class="hobbies-list"></div>
-            <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
-            <p><strong>家务分配：</strong>{{ post.cleaning_frequency or '-' }}</p>
-            <p><strong>对室友的期望：</strong>{{ post.custom_requirements or '-' }}</p>
-        </div>
+
+        {% if images and images|length > 1 %}
+            <button id="carousel-prev" class="carousel-btn prev" type="button" aria-label="上一张">&#10094;</button>
+            <button id="carousel-next" class="carousel-btn next" type="button" aria-label="下一张">&#10095;</button>
+            <div id="carousel-dots" class="carousel-dots"></div>
+        {% endif %}
+    </div>
+
+    <div>
+        <p><strong>租金：</strong>{{ post.rent }}</p>
+        <p><strong>位置：</strong>{{ post.location }}</p>
+        <p><strong>附近学校：</strong>{{ post.nearby_school or '-' }}</p>
+        <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
+        <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
+        <p><strong>面积（㎡）：</strong>{{ post.area or '-' }}</p>
+        <p><strong>个人介绍：</strong>{{ post.poster_intro or '-' }}</p>
+        <p><strong>兴趣爱好：</strong>{{ post.hobbies or '-' }}</p>
+        <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
+        <p><strong>家务分配：</strong>{{ post.cleaning_frequency or '-' }}</p>
+        <p><strong>对室友的期望：</strong>{{ post.custom_requirements or '-' }}</p>
     </div>
 
     <div class="actions">
@@ -57,55 +67,147 @@
 <a href="{{ url_for('posts.list_posts') }}">返回列表</a>
 
 <style>
-    .hobbies-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 8px;
+    .post-carousel {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        overflow: hidden;
+        margin-bottom: 16px;
     }
-    .hobby-card {
+    .carousel-track {
+        display: flex;
+        transition: transform 0.25s ease;
+    }
+    .carousel-slide {
+        min-width: 100%;
+        box-sizing: border-box;
+    }
+    .carousel-slide img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 8px;
+        display: block;
+    }
+    .carousel-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 0;
+        width: 32px;
+        height: 32px;
         border-radius: 999px;
-        background: #f4f4f5;
-        padding: 4px 10px;
-        display: inline-flex;
-        align-items: center;
+        background: rgba(0, 0, 0, 0.45);
+        color: #fff;
+        cursor: pointer;
+        line-height: 1;
+    }
+    .carousel-btn.prev {
+        left: 8px;
+    }
+    .carousel-btn.next {
+        right: 8px;
+    }
+    .carousel-dots {
+        display: flex;
+        justify-content: center;
         gap: 6px;
+        margin-top: 8px;
+    }
+    .carousel-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        border: 0;
+        padding: 0;
+        background: #d4d4d8;
+        cursor: pointer;
+    }
+    .carousel-dot.active {
+        background: #2563eb;
     }
 </style>
 
 <script>
     (function () {
-        var container = document.getElementById("hobbies-list");
-        var hobbiesJson = {{ hobbies_json|tojson }};
-        var hobbies = [];
+        var carousel = document.getElementById("post-carousel");
+        var track = document.getElementById("carousel-track");
+        var prevBtn = document.getElementById("carousel-prev");
+        var nextBtn = document.getElementById("carousel-next");
+        var dotsContainer = document.getElementById("carousel-dots");
+        var slides = track ? track.querySelectorAll(".carousel-slide") : [];
+        var currentIndex = 0;
+        var startX = 0;
+        var deltaX = 0;
 
-        try {
-            var parsed = JSON.parse(hobbiesJson || "[]");
-            if (Array.isArray(parsed)) {
-                hobbies = parsed;
-            }
-        } catch (error) {
-            hobbies = [];
-        }
-
-        if (!hobbies.length) {
-            container.textContent = "-";
-            return;
-        }
-
-        hobbies.forEach(function (item) {
-            if (!item || !item.emoji || !item.text) {
+        function updateCarousel() {
+            if (!track || !slides.length) {
                 return;
             }
-            var chip = document.createElement("span");
-            chip.className = "hobby-card";
-            chip.textContent = item.emoji + " " + item.text;
-            container.appendChild(chip);
-        });
-
-        if (!container.childElementCount) {
-            container.textContent = "-";
+            track.style.transform = "translateX(-" + (currentIndex * 100) + "%)";
+            if (!dotsContainer) {
+                return;
+            }
+            var dots = dotsContainer.querySelectorAll(".carousel-dot");
+            for (var i = 0; i < dots.length; i += 1) {
+                dots[i].classList.toggle("active", i === currentIndex);
+            }
         }
+
+        if (slides.length > 1 && dotsContainer) {
+            for (var d = 0; d < slides.length; d += 1) {
+                (function (dotIndex) {
+                    var dot = document.createElement("button");
+                    dot.type = "button";
+                    dot.className = "carousel-dot" + (dotIndex === 0 ? " active" : "");
+                    dot.setAttribute("aria-label", "切换到第" + (dotIndex + 1) + "张");
+                    dot.addEventListener("click", function () {
+                        currentIndex = dotIndex;
+                        updateCarousel();
+                    });
+                    dotsContainer.appendChild(dot);
+                })(d);
+            }
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener("click", function () {
+                currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+                updateCarousel();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener("click", function () {
+                currentIndex = (currentIndex + 1) % slides.length;
+                updateCarousel();
+            });
+        }
+
+        if (carousel && slides.length > 1) {
+            carousel.addEventListener("touchstart", function (event) {
+                startX = event.touches[0].clientX;
+                deltaX = 0;
+            }, { passive: true });
+
+            carousel.addEventListener("touchmove", function (event) {
+                deltaX = event.touches[0].clientX - startX;
+            }, { passive: true });
+
+            carousel.addEventListener("touchend", function () {
+                if (Math.abs(deltaX) < 40) {
+                    return;
+                }
+                if (deltaX < 0) {
+                    currentIndex = (currentIndex + 1) % slides.length;
+                } else {
+                    currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+                }
+                updateCarousel();
+            });
+        }
+
+        updateCarousel();
     })();
 </script>
 {% endblock %}

@@ -1,6 +1,9 @@
+import os
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
-from flask import abort, flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from werkzeug.utils import secure_filename
 
 from models import Favorite, Post, PostImage, ViewHistory, db
 from . import posts_bp
@@ -31,31 +34,6 @@ def _to_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
-
-
-def _collect_image_urls(form):
-    urls = []
-
-    for value in form.getlist("image_urls"):
-        value = (value or "").strip()
-        if value:
-            urls.append(value)
-
-    extra_text = (form.get("image_urls_text") or "").strip()
-    if extra_text:
-        for line in extra_text.replace(",", "\n").splitlines():
-            line = line.strip()
-            if line:
-                urls.append(line)
-
-    unique_urls = []
-    seen = set()
-    for url in urls:
-        if url not in seen:
-            seen.add(url)
-            unique_urls.append(url)
-
-    return unique_urls
 
 
 @posts_bp.route("/posts")
@@ -127,10 +105,20 @@ def new_post():
         title = (request.form.get("title") or "").strip()
         rent = _to_decimal(request.form.get("rent"))
         location = (request.form.get("location") or "").strip()
+        uploaded_files = [
+            file
+            for file in request.files.getlist("images")
+            if file and (file.filename or "").strip()
+        ]
+        allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
         if not title or rent is None or not location:
             flash("标题、租金和位置为必填项")
-            return render_template("posts/new.html", form=request.form), 400
+            return render_template("posts/new.html", form_data=request.form), 400
+
+        if len(uploaded_files) > 6:
+            flash("最多上传6张")
+            return render_template("posts/new.html", form_data=request.form), 400
 
         post = Post(
             user_id=_current_user_id(),
@@ -147,14 +135,43 @@ def new_post():
             poster_intro=(request.form.get("poster_intro") or "").strip() or None,
             expected_schedule=(request.form.get("expected_schedule") or "").strip() or None,
             cleaning_frequency=(request.form.get("cleaning_frequency") or "").strip() or None,
-            hobbies=(request.form.get("hobbies") or "").strip() or None,
+            hobbies=request.form.get("hobbies", ""),
             custom_requirements=(request.form.get("custom_requirements") or "").strip() or None,
         )
         db.session.add(post)
         db.session.flush()
 
-        image_urls = _collect_image_urls(request.form)
-        for index, image_url in enumerate(image_urls):
+        upload_folder = current_app.config.get("UPLOAD_FOLDER") or os.path.join(
+            current_app.root_path, "static", "uploads"
+        )
+        os.makedirs(upload_folder, exist_ok=True)
+
+        saved_images = []
+        for index, file in enumerate(uploaded_files):
+            filename = secure_filename(file.filename or "")
+            if "." not in filename:
+                flash("只接受jpg/jpeg/png/webp格式")
+                return render_template("posts/new.html", form_data=request.form), 400
+
+            ext = filename.rsplit(".", 1)[1].lower()
+            if ext not in allowed_extensions:
+                flash("只接受jpg/jpeg/png/webp格式")
+                return render_template("posts/new.html", form_data=request.form), 400
+
+            # Keep backend validation aligned with frontend constraints.
+            file.stream.seek(0, os.SEEK_END)
+            file_size = file.stream.tell()
+            file.stream.seek(0)
+            if file_size > 5 * 1024 * 1024:
+                flash("图片太大，请压缩后再上传")
+                return render_template("posts/new.html", form_data=request.form), 400
+
+            new_filename = secure_filename(f"{uuid4().hex}.{ext}")
+            save_path = os.path.join(upload_folder, new_filename)
+            file.save(save_path)
+            saved_images.append((index, f"/static/uploads/{new_filename}"))
+
+        for index, image_url in saved_images:
             db.session.add(
                 PostImage(
                     post_id=post.id,
@@ -163,11 +180,14 @@ def new_post():
                 )
             )
 
+        if saved_images:
+            post.cover_image = saved_images[0][1]
+
         db.session.commit()
         flash("帖子发布成功")
         return redirect(url_for("posts.post_detail", post_id=post.id))
 
-    return render_template("posts/new.html", form={})
+    return render_template("posts/new.html", form_data={})
 
 
 @posts_bp.route("/posts/<int:post_id>/favorite", methods=["POST"])

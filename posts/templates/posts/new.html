@@ -3,154 +3,82 @@
 {% block title %}发布帖子{% endblock %}
 
 {% block content %}
+{% set form_data = form_data or {} %}
 <div class="card">
-    <form method="post" action="{{ url_for('posts.new_post') }}">
+    <form method="post" action="{{ url_for('posts.new_post') }}" enctype="multipart/form-data">
         <div class="grid grid-2">
             <label>标题 *
-                <input type="text" name="title" value="{{ form.title or '' }}" placeholder="请输入标题" required>
+                <input type="text" name="title" value="{{ form_data.get('title', '') }}" placeholder="请输入标题" required>
             </label>
             <label>租金 *
-                <input type="number" name="rent" min="0" step="1" placeholder="请输入月租金" required>
+                <input type="number" name="rent" min="0" step="1" value="{{ form_data.get('rent', '') }}" placeholder="请输入月租金" required>
             </label>
             <label>位置 *
                 <select name="location" required>
-                    <option value="" disabled selected hidden>请选择位置</option>
-                    <option value="港岛">港岛</option>
-                    <option value="九龙">九龙</option>
-                    <option value="新界">新界</option>
-                    <option value="离岛">离岛</option>
+                    <option value="" disabled {% if not form_data.get('location') %}selected{% endif %} hidden>请选择位置</option>
+                    <option value="港岛" {% if form_data.get('location') == '港岛' %}selected{% endif %}>港岛</option>
+                    <option value="九龙" {% if form_data.get('location') == '九龙' %}selected{% endif %}>九龙</option>
+                    <option value="新界" {% if form_data.get('location') == '新界' %}selected{% endif %}>新界</option>
+                    <option value="离岛" {% if form_data.get('location') == '离岛' %}selected{% endif %}>离岛</option>
                 </select>
             </label>
             <label>附近学校
                 <select name="nearby_school">
-                    <option value="" disabled selected hidden>请选择学校</option>
-                    <option value="香港大学">香港大学</option>
-                    <option value="香港中文大学">香港中文大学</option>
-                    <option value="香港科技大学">香港科技大学</option>
-                    <option value="香港理工大学">香港理工大学</option>
-                    <option value="香港城市大学">香港城市大学</option>
-                    <option value="香港浸会大学">香港浸会大学</option>
-                    <option value="岭南大学">岭南大学</option>
-                    <option value="香港教育大学">香港教育大学</option>
+                    <option value="" disabled {% if not form_data.get('nearby_school') %}selected{% endif %} hidden>请选择学校</option>
+                    <option value="香港大学" {% if form_data.get('nearby_school') == '香港大学' %}selected{% endif %}>香港大学</option>
+                    <option value="香港中文大学" {% if form_data.get('nearby_school') == '香港中文大学' %}selected{% endif %}>香港中文大学</option>
+                    <option value="香港科技大学" {% if form_data.get('nearby_school') == '香港科技大学' %}selected{% endif %}>香港科技大学</option>
+                    <option value="香港理工大学" {% if form_data.get('nearby_school') == '香港理工大学' %}selected{% endif %}>香港理工大学</option>
+                    <option value="香港城市大学" {% if form_data.get('nearby_school') == '香港城市大学' %}selected{% endif %}>香港城市大学</option>
+                    <option value="香港浸会大学" {% if form_data.get('nearby_school') == '香港浸会大学' %}selected{% endif %}>香港浸会大学</option>
+                    <option value="岭南大学" {% if form_data.get('nearby_school') == '岭南大学' %}selected{% endif %}>岭南大学</option>
+                    <option value="香港教育大学" {% if form_data.get('nearby_school') == '香港教育大学' %}selected{% endif %}>香港教育大学</option>
                 </select>
             </label>
             <label>小区名称
-                <input type="text" name="community_name" value="{{ form.community_name or '' }}" placeholder="请输入小区名称">
+                <input type="text" name="community_name" value="{{ form_data.get('community_name', '') }}" placeholder="请输入小区名称">
             </label>
             <label>户型
                 <select name="layout" required>
-                    <option value="" disabled selected hidden>请选择户型</option>
-                    <option value="开放式">开放式 (Studio)</option>
-                    <option value="一房">一房</option>
-                    <option value="两房">两房</option>
-                    <option value="三房">三房</option>
-                    <option value="四房及以上">四房及以上</option>
-                    <option value="其他">其他（劏房/套房等）</option>
+                    <option value="" disabled {% if not form_data.get('layout') %}selected{% endif %} hidden>请选择户型</option>
+                    <option value="开放式" {% if form_data.get('layout') == '开放式' %}selected{% endif %}>开放式 (Studio)</option>
+                    <option value="一房" {% if form_data.get('layout') == '一房' %}selected{% endif %}>一房</option>
+                    <option value="两房" {% if form_data.get('layout') == '两房' %}selected{% endif %}>两房</option>
+                    <option value="三房" {% if form_data.get('layout') == '三房' %}selected{% endif %}>三房</option>
+                    <option value="四房及以上" {% if form_data.get('layout') == '四房及以上' %}selected{% endif %}>四房及以上</option>
+                    <option value="其他" {% if form_data.get('layout') == '其他' %}selected{% endif %}>其他（劏房/套房等）</option>
                 </select>
             </label>
             <label>面积（㎡）
-                <input type="number" step="0.01" name="area" value="{{ form.area or '' }}" placeholder="请输入面积">
+                <input type="number" step="0.01" name="area" value="{{ form_data.get('area', '') }}" placeholder="请输入面积">
             </label>
         </div>
 
         <label>个人介绍
-            <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ form.poster_intro or '' }}</textarea>
+            <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ form_data.get('poster_intro', '') }}</textarea>
         </label>
         <label>期望室友作息时间
-            <input type="text" name="expected_schedule" value="{{ form.expected_schedule or '' }}" placeholder="例：希望11点前熄灯">
+            <input type="text" name="expected_schedule" value="{{ form_data.get('expected_schedule', '') }}" placeholder="例：希望11点前熄灯">
         </label>
         <label>家务分配
-            <input type="text" name="cleaning_frequency" value="{{ form.cleaning_frequency or '' }}" placeholder="例：每人每周轮流打扫公共区域、倒垃圾">
+            <input type="text" name="cleaning_frequency" value="{{ form_data.get('cleaning_frequency', '') }}" placeholder="例：每人每周轮流打扫公共区域、倒垃圾">
         </label>
         <label>对室友的期望
-            <textarea name="custom_requirements" rows="4" placeholder="例：是否接受宠物、带朋友回家的要求、其他期望~">{{ form.custom_requirements or '' }}</textarea>
+            <textarea name="custom_requirements" rows="4" placeholder="例：是否接受宠物、带朋友回家的要求、其他期望~">{{ form_data.get('custom_requirements', '') }}</textarea>
         </label>
 
         <label>兴趣爱好
-            <div class="hobby-builder">
-                <div id="hobby-tags" class="hobby-tags"></div>
-                <div class="hobby-controls">
-                    <select id="hobby-emoji" aria-label="选择emoji">
-                        <option value="">选择emoji</option>
-                        <optgroup label="表情">
-                            <option value="😀">😀</option>
-                            <option value="😂">😂</option>
-                            <option value="🥰">🥰</option>
-                            <option value="😎">😎</option>
-                            <option value="😤">😤</option>
-                            <option value="🥺">🥺</option>
-                        </optgroup>
-                        <optgroup label="运动">
-                            <option value="🏃">🏃</option>
-                            <option value="⚽">⚽</option>
-                            <option value="🏀">🏀</option>
-                            <option value="🎾">🎾</option>
-                            <option value="🏊">🏊</option>
-                            <option value="🧘">🧘</option>
-                        </optgroup>
-                        <optgroup label="美食">
-                            <option value="🍜">🍜</option>
-                            <option value="🍕">🍕</option>
-                            <option value="🍣">🍣</option>
-                            <option value="🧋">🧋</option>
-                            <option value="🍰">🍰</option>
-                            <option value="☕">☕</option>
-                        </optgroup>
-                        <optgroup label="娱乐">
-                            <option value="🎮">🎮</option>
-                            <option value="🎵">🎵</option>
-                            <option value="🎬">🎬</option>
-                            <option value="📚">📚</option>
-                            <option value="🎨">🎨</option>
-                            <option value="🎲">🎲</option>
-                        </optgroup>
-                        <optgroup label="旅行">
-                            <option value="✈️">✈️</option>
-                            <option value="🏖️">🏖️</option>
-                            <option value="🗼">🗼</option>
-                            <option value="🏔️">🏔️</option>
-                            <option value="🚗">🚗</option>
-                            <option value="🌍">🌍</option>
-                        </optgroup>
-                        <optgroup label="动物">
-                            <option value="🐱">🐱</option>
-                            <option value="🐶">🐶</option>
-                            <option value="🐰">🐰</option>
-                            <option value="🐹">🐹</option>
-                            <option value="🐟">🐟</option>
-                            <option value="🦋">🦋</option>
-                        </optgroup>
-                        <optgroup label="其他">
-                            <option value="❤️">❤️</option>
-                            <option value="⭐">⭐</option>
-                            <option value="🔥">🔥</option>
-                            <option value="💡">💡</option>
-                            <option value="🎉">🎉</option>
-                            <option value="✨">✨</option>
-                        </optgroup>
-                    </select>
-                    <input id="hobby-text" type="text" placeholder="输入兴趣爱好" aria-label="输入兴趣爱好">
-                    <button id="add-hobby" type="button" class="btn secondary">添加</button>
-                </div>
-                <input id="hobbies-input" type="hidden" name="hobbies" value="{{ form.hobbies or '[]' }}">
-            </div>
+            <input type="text" name="hobbies" value="{{ form_data.get('hobbies', '') }}" placeholder="如：看电影, 健身, 撸猫">
+            <small>多个爱好用逗号分隔</small>
         </label>
 
         <div class="card">
-            <h3>帖子图片（网络图片地址）</h3>
-            <p class="muted">可以填写多个图片 URL，提交后会保存到 `PostImage` 表。</p>
-            <label>图片地址 1
-                <input type="text" name="image_urls" placeholder="https://...">
+            <h3>帖子图片上传</h3>
+            <p class="muted">支持 jpg/jpeg/png，最多 6 张，每张不超过 5MB。</p>
+            <label>上传图片
+                <input id="images-input" type="file" name="images" multiple accept=".jpg,.jpeg,.png">
             </label>
-            <label>图片地址 2
-                <input type="text" name="image_urls" placeholder="https://...">
-            </label>
-            <label>图片地址 3
-                <input type="text" name="image_urls" placeholder="https://...">
-            </label>
-            <label>更多图片地址（每行一个，或用英文逗号分隔）
-                <textarea name="image_urls_text" rows="4"></textarea>
-            </label>
+            <div id="images-preview" class="images-preview"></div>
         </div>
 
         <button class="btn" type="submit">发布帖子</button>
@@ -159,111 +87,142 @@
 </div>
 
 <style>
-    .hobby-builder {
-        display: grid;
-        gap: 8px;
-    }
-    .hobby-controls {
+    .images-preview {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
     }
-    .hobby-controls select,
-    .hobby-controls input {
-        flex: 1 1 10em;
+    .image-thumb {
+        position: relative;
+        width: 100px;
+        height: 100px;
     }
-    .hobby-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+    .image-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        display: block;
     }
-    .hobby-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 999px;
-        background: #f4f4f5;
-        padding: 4px 10px;
-    }
-    .hobby-chip button {
+    .remove-thumb {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        width: 22px;
+        height: 22px;
         border: 0;
-        background: transparent;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #fff;
         cursor: pointer;
-        font-size: 14px;
         line-height: 1;
     }
 </style>
 
 <script>
     (function () {
-        var tagsContainer = document.getElementById("hobby-tags");
-        var emojiSelect = document.getElementById("hobby-emoji");
-        var textInput = document.getElementById("hobby-text");
-        var addButton = document.getElementById("add-hobby");
-        var hiddenInput = document.getElementById("hobbies-input");
-        var hobbies = [];
+        var form = document.querySelector("form[action='{{ url_for('posts.new_post') }}']");
+        var imageInput = document.getElementById("images-input");
+        var previewContainer = document.getElementById("images-preview");
+        var selectedFiles = [];
+        var previewUrls = [];
 
-        function syncHiddenInput() {
-            hiddenInput.value = JSON.stringify(hobbies);
+        function clearPreviewUrls() {
+            for (var i = 0; i < previewUrls.length; i += 1) {
+                URL.revokeObjectURL(previewUrls[i]);
+            }
+            previewUrls = [];
         }
 
-        function renderHobbies() {
-            tagsContainer.innerHTML = "";
-            hobbies.forEach(function (item, index) {
-                var chip = document.createElement("span");
-                chip.className = "hobby-chip";
+        function renderImagePreview() {
+            if (!previewContainer) {
+                return;
+            }
 
-                var label = document.createElement("span");
-                label.textContent = item.emoji + " " + item.text;
-                chip.appendChild(label);
+            clearPreviewUrls();
+            previewContainer.innerHTML = "";
+
+            selectedFiles.forEach(function (file, index) {
+                var thumb = document.createElement("div");
+                thumb.className = "image-thumb";
+
+                var img = document.createElement("img");
+                var previewUrl = URL.createObjectURL(file);
+                previewUrls.push(previewUrl);
+                img.src = previewUrl;
+                img.alt = "图片预览";
+                thumb.appendChild(img);
 
                 var removeButton = document.createElement("button");
                 removeButton.type = "button";
-                removeButton.textContent = "✕";
-                removeButton.setAttribute("aria-label", "删除兴趣");
+                removeButton.className = "remove-thumb";
+                removeButton.textContent = "×";
+                removeButton.setAttribute("aria-label", "删除图片");
                 removeButton.addEventListener("click", function () {
-                    hobbies.splice(index, 1);
-                    syncHiddenInput();
-                    renderHobbies();
+                    selectedFiles.splice(index, 1);
+                    renderImagePreview();
                 });
-                chip.appendChild(removeButton);
-                tagsContainer.appendChild(chip);
+                thumb.appendChild(removeButton);
+
+                previewContainer.appendChild(thumb);
             });
         }
 
-        function addHobby() {
-            var emoji = emojiSelect.value;
-            var text = (textInput.value || "").trim();
-            if (!emoji || !text) {
-                return;
-            }
-            hobbies.push({ emoji: emoji, text: text });
-            textInput.value = "";
-            syncHiddenInput();
-            renderHobbies();
+        if (imageInput) {
+            imageInput.addEventListener("change", function () {
+                var files = imageInput.files || [];
+                for (var i = 0; i < files.length; i += 1) {
+                    if (files[i].size > 5 * 1024 * 1024) {
+                        alert("图片太大，请压缩后再上传");
+                        continue;
+                    }
+                    if (selectedFiles.length >= 6) {
+                        alert("最多上传6张");
+                        break;
+                    }
+                    selectedFiles.push(files[i]);
+                }
+
+                imageInput.value = "";
+                renderImagePreview();
+            });
         }
 
-        addButton.addEventListener("click", addHobby);
-        textInput.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") {
+        if (form) {
+            form.addEventListener("submit", function (event) {
                 event.preventDefault();
-                addHobby();
-            }
-        });
 
-        try {
-            var parsed = JSON.parse(hiddenInput.value || "[]");
-            if (Array.isArray(parsed)) {
-                hobbies = parsed.filter(function (item) {
-                    return item && typeof item.emoji === "string" && typeof item.text === "string" && item.emoji && item.text;
+                var formData = new FormData(form);
+                formData.delete("images");
+                selectedFiles.forEach(function (file) {
+                    formData.append("images", file);
                 });
-            }
-        } catch (error) {
-            hobbies = [];
+
+                fetch(form.action, {
+                    method: "POST",
+                    body: formData
+                }).then(function (response) {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return null;
+                    }
+                    return response.text();
+                }).then(function (html) {
+                    if (!html) {
+                        return;
+                    }
+                    document.open();
+                    document.write(html);
+                    document.close();
+                }).catch(function () {
+                    alert("提交失败，请稍后重试");
+                });
+            });
         }
-        syncHiddenInput();
-        renderHobbies();
+
+        renderImagePreview();
     })();
 </script>
 {% endblock %}
