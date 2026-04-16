@@ -3,8 +3,31 @@
 {% block title %}帖子列表{% endblock %}
 
 {% block content %}
+<style>
+    .filter-row {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+    .rent-tag {
+        cursor: pointer;
+        padding: 2px 8px;
+    }
+    .rent-tag.active {
+        font-weight: bold;
+        text-decoration: underline;
+    }
+    .rent-input {
+        flex: 0 1 5em;
+        min-width: 3em;
+    }
+</style>
 <div class="card">
-    <form method="get" action="{{ url_for('posts.list_posts') }}" class="grid grid-2">
+    <form id="filter-form" method="get" action="{{ url_for('posts.list_posts') }}" class="grid grid-2">
+        <input type="hidden" id="hidden-min-rent" name="min_rent" value="{{ filters.min_rent }}">
+        <input type="hidden" id="hidden-max-rent" name="max_rent" value="{{ filters.max_rent }}">
         <label>位置
             <select name="location">
                 <option value="" {% if not filters.location %}selected{% endif %}>不限</option>
@@ -27,14 +50,30 @@
                 <option value="EdUHK" {% if filters.nearby_school == 'EdUHK' %}selected{% endif %}>香港教育大学</option>
             </select>
         </label>
-        <label>最低租金
-            <input type="number" step="0.01" name="min_rent" value="{{ filters.min_rent }}">
-        </label>
-        <label>最高租金
-            <input type="number" step="0.01" name="max_rent" value="{{ filters.max_rent }}">
-        </label>
+        <div class="filter-row">
+            <span>租金</span>
+            <button type="button" class="rent-tag {% if filters.min_rent == '' and filters.max_rent == '' %}active{% endif %}" data-min="" data-max="">不限</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '' and filters.max_rent == '3000' %}active{% endif %}" data-min="" data-max="3000">3000以下</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '3000' and filters.max_rent == '5000' %}active{% endif %}" data-min="3000" data-max="5000">3000-5000</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '5000' and filters.max_rent == '8000' %}active{% endif %}" data-min="5000" data-max="8000">5000-8000</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '8000' and filters.max_rent == '10000' %}active{% endif %}" data-min="8000" data-max="10000">8000-10000</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '10000' and filters.max_rent == '15000' %}active{% endif %}" data-min="10000" data-max="15000">10000-15000</button>
+            <button type="button" class="rent-tag {% if filters.min_rent == '15000' and filters.max_rent == '' %}active{% endif %}" data-min="15000" data-max="">15000以上</button>
+            <input id="min-rent" class="rent-input" type="number" step="50" name="custom_min_rent" value="{% if filters.min_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.min_rent }}{% endif %}" placeholder="最低" aria-label="最低租金">
+            <span>-</span>
+            <input id="max-rent" class="rent-input" type="number" step="50" name="custom_max_rent" value="{% if filters.max_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.max_rent }}{% endif %}" placeholder="最高" aria-label="最高租金">
+            <span>元</span>
+        </div>
         <label>户型
-            <input type="text" name="layout" value="{{ filters.layout }}" placeholder="例如：2室1厅">
+            <select name="layout">
+                <option value="" {% if not filters.layout %}selected{% endif %}>不限</option>
+                <option value="开放式" {% if filters.layout == '开放式' %}selected{% endif %}>开放式 (Studio)</option>
+                <option value="一房" {% if filters.layout == '一房' %}selected{% endif %}>一房</option>
+                <option value="两房" {% if filters.layout == '两房' %}selected{% endif %}>两房</option>
+                <option value="三房" {% if filters.layout == '三房' %}selected{% endif %}>三房</option>
+                <option value="四房及以上" {% if filters.layout == '四房及以上' %}selected{% endif %}>四房及以上</option>
+                <option value="其他" {% if filters.layout == '其他' %}selected{% endif %}>其他（劏房/套房等）</option>
+            </select>
         </label>
         <div style="align-self:end;">
             <button class="btn" type="submit">筛选</button>
@@ -42,6 +81,53 @@
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        var form = document.getElementById("filter-form");
+        var hiddenMinInput = document.getElementById("hidden-min-rent");
+        var hiddenMaxInput = document.getElementById("hidden-max-rent");
+        var minInput = document.getElementById("min-rent");
+        var maxInput = document.getElementById("max-rent");
+        var tags = document.querySelectorAll(".rent-tag");
+
+        function setActive(target) {
+            tags.forEach(function (tag) {
+                tag.classList.remove("active");
+            });
+            if (target) {
+                target.classList.add("active");
+            }
+        }
+
+        tags.forEach(function (tag) {
+            tag.addEventListener("click", function () {
+                hiddenMinInput.value = tag.getAttribute("data-min") || "";
+                hiddenMaxInput.value = tag.getAttribute("data-max") || "";
+                minInput.value = "";
+                maxInput.value = "";
+                setActive(tag);
+            });
+        });
+
+        function onCustomRentInput() {
+            setActive(null);
+            hiddenMinInput.value = "";
+            hiddenMaxInput.value = "";
+        }
+
+        minInput.addEventListener("input", onCustomRentInput);
+        maxInput.addEventListener("input", onCustomRentInput);
+
+        form.addEventListener("submit", function () {
+            if (minInput.value || maxInput.value) {
+                hiddenMinInput.value = minInput.value;
+                hiddenMaxInput.value = maxInput.value;
+            }
+        });
+
+    })();
+</script>
 
 {% if posts %}
     <div class="grid grid-2">

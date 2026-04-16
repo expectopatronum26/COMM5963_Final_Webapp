@@ -10,19 +10,43 @@
                 <input type="text" name="title" value="{{ form.title or '' }}" required>
             </label>
             <label>租金 *
-                <input type="number" step="0.01" name="rent" value="{{ form.rent or '' }}" required>
+                <input type="number" name="rent" min="0" step="1" placeholder="请输入月租金" required>
             </label>
             <label>位置 *
-                <input type="text" name="location" value="{{ form.location or '' }}" required>
+                <select name="location" required>
+                    <option value="" disabled selected hidden>请选择位置</option>
+                    <option value="港岛">港岛</option>
+                    <option value="九龙">九龙</option>
+                    <option value="新界">新界</option>
+                    <option value="离岛">离岛</option>
+                </select>
             </label>
             <label>附近学校
-                <input type="text" name="nearby_school" value="{{ form.nearby_school or '' }}">
+                <select name="nearby_school">
+                    <option value="" disabled selected hidden>请选择学校</option>
+                    <option value="香港大学">香港大学</option>
+                    <option value="香港中文大学">香港中文大学</option>
+                    <option value="香港科技大学">香港科技大学</option>
+                    <option value="香港理工大学">香港理工大学</option>
+                    <option value="香港城市大学">香港城市大学</option>
+                    <option value="香港浸会大学">香港浸会大学</option>
+                    <option value="岭南大学">岭南大学</option>
+                    <option value="香港教育大学">香港教育大学</option>
+                </select>
             </label>
             <label>小区名称
                 <input type="text" name="community_name" value="{{ form.community_name or '' }}">
             </label>
             <label>户型
-                <input type="text" name="layout" value="{{ form.layout or '' }}">
+                <select name="layout" required>
+                    <option value="" disabled selected hidden>请选择户型</option>
+                    <option value="开放式">开放式 (Studio)</option>
+                    <option value="一房">一房</option>
+                    <option value="两房">两房</option>
+                    <option value="三房">三房</option>
+                    <option value="四房及以上">四房及以上</option>
+                    <option value="其他">其他（劏房/套房等）</option>
+                </select>
             </label>
             <label>面积
                 <input type="number" step="0.01" name="area" value="{{ form.area or '' }}">
