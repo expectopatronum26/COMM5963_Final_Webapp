@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}发布帖子{% endblock %}
+
+{% block content %}
+<div class="card">
+    <form method="post" action="{{ url_for('posts.new_post') }}">
+        <div class="grid grid-2">
+            <label>标题 *
+                <input type="text" name="title" value="{{ form.title or '' }}" required>
+            </label>
+            <label>租金 *
+                <input type="number" step="0.01" name="rent" value="{{ form.rent or '' }}" required>
+            </label>
+            <label>位置 *
+                <input type="text" name="location" value="{{ form.location or '' }}" required>
+            </label>
+            <label>附近学校
+                <input type="text" name="nearby_school" value="{{ form.nearby_school or '' }}">
+            </label>
+            <label>小区名称
+                <input type="text" name="community_name" value="{{ form.community_name or '' }}">
+            </label>
+            <label>户型
+                <input type="text" name="layout" value="{{ form.layout or '' }}">
+            </label>
+            <label>面积
+                <input type="number" step="0.01" name="area" value="{{ form.area or '' }}">
+            </label>
+            <label>发帖人性别
+                <input type="text" name="poster_gender" value="{{ form.poster_gender or '' }}">
+            </label>
+            <label>年龄
+                <input type="number" name="poster_age" value="{{ form.poster_age or '' }}">
+            </label>
+            <label>职业或学校
+                <input type="text" name="poster_occupation_or_school" value="{{ form.poster_occupation_or_school or '' }}">
+            </label>
+        </div>
+
+        <label>个人介绍
+            <textarea name="poster_intro" rows="4">{{ form.poster_intro or '' }}</textarea>
+        </label>
+        <label>期望室友作息时间
+            <input type="text" name="expected_schedule" value="{{ form.expected_schedule or '' }}">
+        </label>
+        <label>搞卫生频次
+            <input type="text" name="cleaning_frequency" value="{{ form.cleaning_frequency or '' }}">
+        </label>
+        <label>家务分配方式
+            <input type="text" name="chore_distribution" value="{{ form.chore_distribution or '' }}">
+        </label>
+        <label>自定义要求
+            <textarea name="custom_requirements" rows="4">{{ form.custom_requirements or '' }}</textarea>
+        </label>
+
+        <div class="card">
+            <h3>帖子图片（网络图片地址）</h3>
+            <p class="muted">可以填写多个图片 URL，提交后会保存到 `PostImage` 表。</p>
+            <label>图片地址 1
+                <input type="text" name="image_urls" placeholder="https://...">
+            </label>
+            <label>图片地址 2
+                <input type="text" name="image_urls" placeholder="https://...">
+            </label>
+            <label>图片地址 3
+                <input type="text" name="image_urls" placeholder="https://...">
+            </label>
+            <label>更多图片地址（每行一个，或用英文逗号分隔）
+                <textarea name="image_urls_text" rows="4"></textarea>
+            </label>
+        </div>
+
+        <button class="btn" type="submit">发布帖子</button>
+        <a class="btn secondary" href="{{ url_for('posts.list_posts') }}">取消</a>
+    </form>
+</div>
+{% endblock %}

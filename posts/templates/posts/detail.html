@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}帖子详情{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>{{ post.title }}</h2>
+    <p class="muted">发布人：{{ post.author.username if post.author else '未知' }} ｜ 发布时间：{{ post.created_at }}</p>
+
+    <div class="grid grid-2">
+        <div>
+            {% if images %}
+                {% for image in images %}
+                    <img class="cover" src="{{ image.image_url }}" alt="帖子图片">
+                {% endfor %}
+            {% else %}
+                <img class="cover" src="https://picsum.photos/seed/roommate-detail/900/600" alt="默认图片">
+            {% endif %}
+        </div>
+        <div>
+            <p><strong>租金：</strong>{{ post.rent }}</p>
+            <p><strong>位置：</strong>{{ post.location }}</p>
+            <p><strong>附近学校：</strong>{{ post.nearby_school or '-' }}</p>
+            <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
+            <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
+            <p><strong>面积：</strong>{{ post.area or '-' }}</p>
+            <p><strong>发帖人性别：</strong>{{ post.poster_gender or '-' }}</p>
+            <p><strong>年龄：</strong>{{ post.poster_age or '-' }}</p>
+            <p><strong>职业或学校：</strong>{{ post.poster_occupation_or_school or '-' }}</p>
+            <p><strong>个人介绍：</strong>{{ post.poster_intro or '-' }}</p>
+            <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
+            <p><strong>搞卫生频次：</strong>{{ post.cleaning_frequency or '-' }}</p>
+            <p><strong>家务分配方式：</strong>{{ post.chore_distribution or '-' }}</p>
+            <p><strong>自定义要求：</strong>{{ post.custom_requirements or '-' }}</p>
+        </div>
+    </div>
+
+    <div class="actions">
+        <form method="post" action="{{ url_for('posts.toggle_favorite', post_id=post.id) }}">
+            <button class="btn {% if is_favorite %}danger{% endif %}" type="submit">
+                {% if is_favorite %}取消收藏{% else %}收藏{% endif %}
+            </button>
+        </form>
+        <a class="btn secondary" href="#appointment">预约看房</a>
+        <a class="btn secondary" href="#message">发私信</a>
+    </div>
+</div>
+
+<div class="card" id="appointment">
+    <h3>预约看房</h3>
+    <p class="muted">这里先预留预约入口，后续可以接 Appointment 模块。</p>
+</div>
+
+<div class="card" id="message">
+    <h3>发私信</h3>
+    <p class="muted">这里先预留私信入口，后续可以接 Message 模块。</p>
+</div>
+
+<a href="{{ url_for('posts.list_posts') }}">返回列表</a>
+{% endblock %}
