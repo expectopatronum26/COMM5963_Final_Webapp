@@ -23,7 +23,48 @@
         flex: 0 1 5em;
         min-width: 3em;
     }
+    .ai-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .ai-row input {
+        margin-top: 0;
+        flex: 1;
+    }
+    .ai-answer {
+        margin-top: 12px;
+    }
+    .ai-answer summary {
+        cursor: pointer;
+        color: #444;
+    }
+    .ai-answer-content {
+        margin-top: 10px;
+        line-height: 1.6;
+    }
+    .ai-answer-content p,
+    .ai-answer-content ul,
+    .ai-answer-content ol {
+        margin: 0 0 8px;
+    }
+    .ai-answer-content code {
+        background: #f4f4f4;
+        padding: 1px 4px;
+        border-radius: 4px;
+    }
 </style>
+<div class="card">
+    <h3 style="margin-top: 0;">AI 搜索助手</h3>
+    <form id="ai-chat-form" class="ai-row">
+        <input id="ai-chat-input" type="text" placeholder="比如：我想找旺角附近3000以下的两室房" aria-label="AI搜索输入">
+        <button id="ai-chat-send" class="btn" type="submit">发送</button>
+    </form>
+    <details id="ai-answer-box" class="ai-answer" hidden>
+        <summary>AI 回答（点击展开/收起）</summary>
+        <div id="ai-answer-content" class="ai-answer-content"></div>
+    </details>
+</div>
 <div class="card">
     <form id="filter-form" method="get" action="{{ url_for('posts.list_posts') }}" class="grid grid-2">
         <input type="hidden" id="hidden-min-rent" name="min_rent" value="{{ filters.min_rent }}">
@@ -65,15 +106,7 @@
             <span>元</span>
         </div>
         <label>户型
-            <select name="layout">
-                <option value="" {% if not filters.layout %}selected{% endif %}>不限</option>
-                <option value="开放式" {% if filters.layout == '开放式' %}selected{% endif %}>开放式 (Studio)</option>
-                <option value="一房" {% if filters.layout == '一房' %}selected{% endif %}>一房</option>
-                <option value="两房" {% if filters.layout == '两房' %}selected{% endif %}>两房</option>
-                <option value="三房" {% if filters.layout == '三房' %}selected{% endif %}>三房</option>
-                <option value="四房及以上" {% if filters.layout == '四房及以上' %}selected{% endif %}>四房及以上</option>
-                <option value="其他" {% if filters.layout == '其他' %}selected{% endif %}>其他（劏房/套房等）</option>
-            </select>
+            <input type="text" name="layout" value="{{ filters.layout }}" placeholder="例如：2室1厅">
         </label>
         <div style="align-self:end;">
             <button class="btn" type="submit">筛选</button>
@@ -82,6 +115,8 @@
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
 <script>
     (function () {
         var form = document.getElementById("filter-form");
@@ -90,6 +125,11 @@
         var minInput = document.getElementById("min-rent");
         var maxInput = document.getElementById("max-rent");
         var tags = document.querySelectorAll(".rent-tag");
+        var aiForm = document.getElementById("ai-chat-form");
+        var aiInput = document.getElementById("ai-chat-input");
+        var aiSendButton = document.getElementById("ai-chat-send");
+        var aiAnswerBox = document.getElementById("ai-answer-box");
+        var aiAnswerContent = document.getElementById("ai-answer-content");
 
         function setActive(target) {
             tags.forEach(function (tag) {
@@ -124,6 +164,110 @@
                 hiddenMinInput.value = minInput.value;
                 hiddenMaxInput.value = maxInput.value;
             }
+        });
+
+        function setAiLoading(isLoading) {
+            aiInput.disabled = isLoading;
+            aiSendButton.disabled = isLoading;
+            aiSendButton.textContent = isLoading ? "发送中..." : "发送";
+        }
+
+        function hardenRenderedLinks(html) {
+            var template = document.createElement("template");
+            template.innerHTML = html;
+            var anchors = template.content.querySelectorAll("a");
+
+            anchors.forEach(function (anchor) {
+                var href = (anchor.getAttribute("href") || "").trim();
+                var isPostPath = /^\/posts\/\d+$/.test(href);
+                var isHttpLink = /^https?:\/\//i.test(href);
+
+                if (isPostPath) {
+                    return;
+                }
+
+                if (isHttpLink) {
+                    anchor.setAttribute("target", "_blank");
+                    anchor.setAttribute("rel", "noopener noreferrer nofollow");
+                    return;
+                }
+
+                // Drop unsafe protocols such as javascript:, data:, vbscript:, etc.
+                var linkText = document.createTextNode(anchor.textContent || "");
+                anchor.replaceWith(linkText);
+            });
+
+            return template.innerHTML;
+        }
+
+        function renderAiAnswer(rawText) {
+            var escapedText = (rawText || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+
+            var markdownWithLinks = escapedText.replace(/\/posts\/\d+/g, function (path) {
+                return "[" + path + "](" + path + ")";
+            });
+
+            if (window.marked && typeof window.marked.parse === "function") {
+                var parsedHtml = window.marked.parse(markdownWithLinks, {
+                    gfm: true,
+                    breaks: true,
+                });
+
+                if (window.DOMPurify && typeof window.DOMPurify.sanitize === "function") {
+                    parsedHtml = window.DOMPurify.sanitize(parsedHtml, {
+                        USE_PROFILES: { html: true },
+                    });
+                }
+
+                aiAnswerContent.innerHTML = hardenRenderedLinks(parsedHtml);
+                return;
+            }
+
+            aiAnswerContent.textContent = rawText || "";
+        }
+
+        aiForm.addEventListener("submit", function (event) {
+            event.preventDefault();
+            var message = aiInput.value.trim();
+            if (!message) {
+                return;
+            }
+
+            setAiLoading(true);
+            fetch("{{ url_for('posts.chat_api') }}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: message })
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (!result.ok) {
+                        throw new Error(result.data.error || "AI 请求失败，请稍后重试");
+                    }
+
+                    renderAiAnswer(result.data.answer || "暂无可展示的回答");
+                    aiAnswerBox.hidden = false;
+                    aiAnswerBox.open = true;
+                })
+                .catch(function (error) {
+                    renderAiAnswer(error.message);
+                    aiAnswerBox.hidden = false;
+                    aiAnswerBox.open = true;
+                })
+                .finally(function () {
+                    setAiLoading(false);
+                });
         });
 
     })();

@@ -42,7 +42,7 @@ class Post(db.Model):
     poster_age = db.Column(db.Integer, nullable=True)
     poster_occupation_or_school = db.Column(db.String(100), nullable=True)
     poster_intro = db.Column(db.Text, nullable=True)
-    hobbies = db.Column(db.Text, nullable=True)  # 存JSON格式的兴趣标签列表
+    hobbies = db.Column(db.Text, nullable=True)  # 存JSON格式的兴趣列表
 
     # Roommate expectations
     expected_schedule = db.Column(db.String(100), nullable=True)

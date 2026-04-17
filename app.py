@@ -4,10 +4,18 @@ from pathlib import Path
 
 from flask import Flask, redirect, url_for
 
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
+
 from models import db
 from posts import posts_bp
 
 app = Flask(__name__)
+if load_dotenv:
+    load_dotenv()
+
 db_path = Path(app.instance_path) / 'flaskproject.db'
 db_path.parent.mkdir(parents=True, exist_ok=True)
 

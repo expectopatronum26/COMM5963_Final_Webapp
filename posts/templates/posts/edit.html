@@ -19,7 +19,6 @@
 
 <div class="card">
     <form method="POST" action="/posts/{{ post.id }}/edit" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <div class="grid grid-2">
             <label>标题 *
                 <input type="text" name="title" value="{{ title_val }}" placeholder="请输入标题" required>
@@ -282,9 +281,6 @@
 
                 fetch(form.action, {
                     method: "POST",
-                    headers: {
-                        "X-CSRFToken": formData.get("csrf_token") || ""
-                    },
                     body: formData
                 }).then(function (response) {
                     if (response.redirected) {
