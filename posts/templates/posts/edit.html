@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+
+{% block title %}编辑帖子{% endblock %}
+
+{% block content %}
+{% set form_data = form_data or {} %}
+{% set title_val = form_data.get('title', post.title or '') %}
+{% set rent_val = form_data.get('rent', post.rent or '') %}
+{% set location_val = form_data.get('location', post.location or '') %}
+{% set nearby_school_val = form_data.get('nearby_school', post.nearby_school or '') %}
+{% set community_name_val = form_data.get('community_name', post.community_name or '') %}
+{% set layout_val = form_data.get('layout', post.layout or '') %}
+{% set area_val = form_data.get('area', post.area or '') %}
+{% set poster_intro_val = form_data.get('poster_intro', post.poster_intro or '') %}
+{% set expected_schedule_val = form_data.get('expected_schedule', post.expected_schedule or '') %}
+{% set cleaning_frequency_val = form_data.get('cleaning_frequency', post.cleaning_frequency or '') %}
+{% set custom_requirements_val = form_data.get('custom_requirements', post.custom_requirements or '') %}
+{% set hobbies_val = form_data.get('hobbies', post.hobbies or '') %}
+
+<div class="card">
+    <form method="POST" action="/posts/{{ post.id }}/edit" enctype="multipart/form-data">
+        <div class="grid grid-2">
+            <label>标题 *
+                <input type="text" name="title" value="{{ title_val }}" placeholder="请输入标题" required>
+            </label>
+            <label>租金 *
+                <input type="number" name="rent" min="0" step="1" value="{{ rent_val }}" placeholder="请输入月租金" required>
+            </label>
+            <label>位置 *
+                <select name="location" required>
+                    <option value="" disabled {% if not location_val %}selected{% endif %} hidden>请选择位置</option>
+                    <option value="港岛" {% if location_val == '港岛' %}selected{% endif %}>港岛</option>
+                    <option value="九龙" {% if location_val == '九龙' %}selected{% endif %}>九龙</option>
+                    <option value="新界" {% if location_val == '新界' %}selected{% endif %}>新界</option>
+                    <option value="离岛" {% if location_val == '离岛' %}selected{% endif %}>离岛</option>
+                </select>
+            </label>
+            <label>附近学校
+                <select name="nearby_school">
+                    <option value="" disabled {% if not nearby_school_val %}selected{% endif %} hidden>请选择学校</option>
+                    <option value="香港大学" {% if nearby_school_val == '香港大学' %}selected{% endif %}>香港大学</option>
+                    <option value="香港中文大学" {% if nearby_school_val == '香港中文大学' %}selected{% endif %}>香港中文大学</option>
+                    <option value="香港科技大学" {% if nearby_school_val == '香港科技大学' %}selected{% endif %}>香港科技大学</option>
+                    <option value="香港理工大学" {% if nearby_school_val == '香港理工大学' %}selected{% endif %}>香港理工大学</option>
+                    <option value="香港城市大学" {% if nearby_school_val == '香港城市大学' %}selected{% endif %}>香港城市大学</option>
+                    <option value="香港浸会大学" {% if nearby_school_val == '香港浸会大学' %}selected{% endif %}>香港浸会大学</option>
+                    <option value="岭南大学" {% if nearby_school_val == '岭南大学' %}selected{% endif %}>岭南大学</option>
+                    <option value="香港教育大学" {% if nearby_school_val == '香港教育大学' %}selected{% endif %}>香港教育大学</option>
+                </select>
+            </label>
+            <label>小区名称
+                <input type="text" name="community_name" value="{{ community_name_val }}" placeholder="请输入小区名称">
+            </label>
+            <label>户型
+                <select name="layout" required>
+                    <option value="" disabled {% if not layout_val %}selected{% endif %} hidden>请选择户型</option>
+                    <option value="开放式" {% if layout_val == '开放式' %}selected{% endif %}>开放式 (Studio)</option>
+                    <option value="一房" {% if layout_val == '一房' %}selected{% endif %}>一房</option>
+                    <option value="两房" {% if layout_val == '两房' %}selected{% endif %}>两房</option>
+                    <option value="三房" {% if layout_val == '三房' %}selected{% endif %}>三房</option>
+                    <option value="四房及以上" {% if layout_val == '四房及以上' %}selected{% endif %}>四房及以上</option>
+                    <option value="其他" {% if layout_val == '其他' %}selected{% endif %}>其他（劏房/套房等）</option>
+                </select>
+            </label>
+            <label>面积（㎡）
+                <input type="number" step="0.01" name="area" value="{{ area_val }}" placeholder="请输入面积">
+            </label>
+        </div>
+
+        <label>个人介绍
+            <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ poster_intro_val }}</textarea>
+        </label>
+        <label>期望室友作息时间
+            <input type="text" name="expected_schedule" value="{{ expected_schedule_val }}" placeholder="例：希望11点前熄灯">
+        </label>
+        <label>家务分配
+            <input type="text" name="cleaning_frequency" value="{{ cleaning_frequency_val }}" placeholder="例：每人每周轮流打扫公共区域、倒垃圾">
+        </label>
+        <label>对室友的期望
+            <textarea name="custom_requirements" rows="4" placeholder="例：是否接受宠物、带朋友回家的要求、其他期望~">{{ custom_requirements_val }}</textarea>
+        </label>
+
+        <label>兴趣爱好
+            <input type="text" name="hobbies" value="{{ hobbies_val }}" placeholder="如：看电影, 健身, 撸猫">
+            <small>多个爱好用逗号分隔</small>
+        </label>
+
+        <div class="card">
+            <h3>帖子图片上传</h3>
+            <p class="muted">支持 jpg/jpeg/png，最多 6 张，每张不超过 5MB。</p>
+            <div id="existing-images" class="images-preview existing-images">
+                {% for image in post.images %}
+                    <div class="image-thumb existing-image-thumb" data-image-id="{{ image.id }}">
+                        <img src="{{ image.image_url }}" alt="已有图片">
+                        <button type="button" class="remove-thumb remove-existing" aria-label="移除已有图片">×</button>
+                    </div>
+                {% endfor %}
+            </div>
+            <div id="delete-images-container"></div>
+            <p id="image-count-tip" class="muted"></p>
+
+            <label>上传新图片
+                <input id="images-input" type="file" name="images" multiple accept=".jpg,.jpeg,.png,.webp">
+            </label>
+            <div id="images-preview" class="images-preview"></div>
+        </div>
+
+        <button class="btn" type="submit">保存修改</button>
+        <a class="btn secondary" href="{{ url_for('posts.post_detail', post_id=post.id) }}">取消</a>
+    </form>
+</div>
+
+<style>
+    .images-preview {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .image-thumb {
+        position: relative;
+        width: 100px;
+        height: 100px;
+    }
+    .image-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        display: block;
+    }
+    .remove-thumb {
+        position: absolute;
+        top: -7px;
+        right: -7px;
+        width: 22px;
+        height: 22px;
+        border: 0;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #fff;
+        cursor: pointer;
+        line-height: 1;
+    }
+</style>
+
+<script>
+    (function () {
+        var form = document.querySelector("form[action='/posts/{{ post.id }}/edit']");
+        var imageInput = document.getElementById("images-input");
+        var previewContainer = document.getElementById("images-preview");
+        var existingContainer = document.getElementById("existing-images");
+        var deleteImagesContainer = document.getElementById("delete-images-container");
+        var countTip = document.getElementById("image-count-tip");
+        var selectedFiles = [];
+        var previewUrls = [];
+        var maxImages = 6;
+        var keptExistingCount = existingContainer
+            ? existingContainer.querySelectorAll(".existing-image-thumb").length
+            : 0;
+
+        function updateImageCountTip() {
+            if (!countTip) {
+                return;
+            }
+            var currentCount = keptExistingCount + selectedFiles.length;
+            var remainingCount = maxImages - currentCount;
+            if (remainingCount < 0) {
+                remainingCount = 0;
+            }
+            countTip.textContent = "当前" + currentCount + "张，还能上传" + remainingCount + "张（总数不超过6张）";
+        }
+
+        function appendDeleteInput(imageId) {
+            if (!deleteImagesContainer) {
+                return;
+            }
+            var hiddenInput = document.createElement("input");
+            hiddenInput.type = "hidden";
+            hiddenInput.name = "delete_images";
+            hiddenInput.value = imageId;
+            deleteImagesContainer.appendChild(hiddenInput);
+        }
+
+        if (existingContainer) {
+            var removeExistingButtons = existingContainer.querySelectorAll(".remove-existing");
+            removeExistingButtons.forEach(function (button) {
+                button.addEventListener("click", function () {
+                    var thumb = button.closest(".existing-image-thumb");
+                    if (!thumb || thumb.getAttribute("data-deleted") === "1") {
+                        return;
+                    }
+                    var imageId = thumb.getAttribute("data-image-id");
+                    thumb.setAttribute("data-deleted", "1");
+                    thumb.style.display = "none";
+                    appendDeleteInput(imageId);
+                    keptExistingCount = Math.max(0, keptExistingCount - 1);
+                    updateImageCountTip();
+                });
+            });
+        }
+
+        function clearPreviewUrls() {
+            for (var i = 0; i < previewUrls.length; i += 1) {
+                URL.revokeObjectURL(previewUrls[i]);
+            }
+            previewUrls = [];
+        }
+
+        function renderImagePreview() {
+            if (!previewContainer) {
+                return;
+            }
+
+            clearPreviewUrls();
+            previewContainer.innerHTML = "";
+
+            selectedFiles.forEach(function (file, index) {
+                var thumb = document.createElement("div");
+                thumb.className = "image-thumb";
+
+                var img = document.createElement("img");
+                var previewUrl = URL.createObjectURL(file);
+                previewUrls.push(previewUrl);
+                img.src = previewUrl;
+                img.alt = "图片预览";
+                thumb.appendChild(img);
+
+                var removeButton = document.createElement("button");
+                removeButton.type = "button";
+                removeButton.className = "remove-thumb";
+                removeButton.textContent = "×";
+                removeButton.setAttribute("aria-label", "删除图片");
+                removeButton.addEventListener("click", function () {
+                    selectedFiles.splice(index, 1);
+                    renderImagePreview();
+                });
+                thumb.appendChild(removeButton);
+
+                previewContainer.appendChild(thumb);
+            });
+
+            updateImageCountTip();
+        }
+
+        if (imageInput) {
+            imageInput.addEventListener("change", function () {
+                var files = imageInput.files || [];
+                for (var i = 0; i < files.length; i += 1) {
+                    if (keptExistingCount + selectedFiles.length >= maxImages) {
+                        alert("最多上传6张");
+                        break;
+                    }
+                    if (files[i].size > 5 * 1024 * 1024) {
+                        alert("图片太大，请压缩后再上传");
+                        continue;
+                    }
+                    selectedFiles.push(files[i]);
+                }
+
+                imageInput.value = "";
+                renderImagePreview();
+            });
+        }
+
+        if (form) {
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                if (keptExistingCount + selectedFiles.length > maxImages) {
+                    alert("最多上传6张");
+                    return;
+                }
+
+                var formData = new FormData(form);
+                formData.delete("images");
+                selectedFiles.forEach(function (file) {
+                    formData.append("images", file);
+                });
+
+                fetch(form.action, {
+                    method: "POST",
+                    body: formData
+                }).then(function (response) {
+                    if (response.redirected) {
+                        window.location.href = response.url;
+                        return null;
+                    }
+                    return response.text();
+                }).then(function (html) {
+                    if (!html) {
+                        return;
+                    }
+                    document.open();
+                    document.write(html);
+                    document.close();
+                }).catch(function () {
+                    alert("提交失败，请稍后重试");
+                });
+            });
+        }
+
+        renderImagePreview();
+        updateImageCountTip();
+    })();
+</script>
+{% endblock %}
+
+

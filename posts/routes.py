@@ -1,4 +1,5 @@
 import os
+import re
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
@@ -34,6 +35,27 @@ def _to_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _normalize_hobbies(value):
+    hobbies_raw = value or ""
+    hobbies_clean = re.sub(r"[，、\|/\s\.]+", ",", hobbies_raw)
+    return re.sub(r",+", ",", hobbies_clean).strip(",")
+
+
+def _delete_local_image_file(image_url):
+    if not image_url or image_url.startswith("http://") or image_url.startswith("https://"):
+        return
+
+    relative_path = image_url.lstrip("/\\")
+    absolute_path = os.path.abspath(os.path.join(current_app.root_path, relative_path.replace("/", os.sep)))
+    uploads_root = os.path.abspath(os.path.join(current_app.root_path, "static", "uploads"))
+
+    if os.path.commonpath([absolute_path, uploads_root]) != uploads_root:
+        return
+
+    if os.path.exists(absolute_path):
+        os.remove(absolute_path)
 
 
 @posts_bp.route("/posts")
@@ -120,6 +142,8 @@ def new_post():
             flash("最多上传6张")
             return render_template("posts/new.html", form_data=request.form), 400
 
+        hobbies_clean = _normalize_hobbies(request.form.get("hobbies", ""))
+
         post = Post(
             user_id=_current_user_id(),
             title=title,
@@ -135,7 +159,7 @@ def new_post():
             poster_intro=(request.form.get("poster_intro") or "").strip() or None,
             expected_schedule=(request.form.get("expected_schedule") or "").strip() or None,
             cleaning_frequency=(request.form.get("cleaning_frequency") or "").strip() or None,
-            hobbies=request.form.get("hobbies", ""),
+            hobbies=hobbies_clean,
             custom_requirements=(request.form.get("custom_requirements") or "").strip() or None,
         )
         db.session.add(post)
@@ -180,14 +204,132 @@ def new_post():
                 )
             )
 
-        if saved_images:
-            post.cover_image = saved_images[0][1]
-
         db.session.commit()
         flash("帖子发布成功")
         return redirect(url_for("posts.post_detail", post_id=post.id))
 
     return render_template("posts/new.html", form_data={})
+
+
+@posts_bp.route("/posts/<int:post_id>/delete", methods=["POST"])
+def delete_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    # TODO: 接入登录系统后，这里需要验证当前用户是否是发帖人
+
+    image_records = post.images.all()
+    image_urls = {image.image_url for image in image_records if image.image_url}
+
+    for image_url in image_urls:
+        _delete_local_image_file(image_url)
+
+    db.session.delete(post)
+    db.session.commit()
+    flash("帖子已删除")
+    return redirect(url_for("posts.list_posts"))
+
+
+@posts_bp.route("/posts/<int:post_id>/edit", methods=["GET", "POST"])
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    # TODO: 接入登录系统后，这里需要验证当前用户是否是发帖人
+
+    if request.method == "GET":
+        return render_template("posts/edit.html", post=post, form_data={})
+
+    title = (request.form.get("title") or "").strip()
+    rent = _to_decimal(request.form.get("rent"))
+    location = (request.form.get("location") or "").strip()
+    uploaded_files = [
+        file
+        for file in request.files.getlist("images")
+        if file and (file.filename or "").strip()
+    ]
+    delete_image_ids = {
+        int(image_id)
+        for image_id in request.form.getlist("delete_images")
+        if (image_id or "").strip().isdigit()
+    }
+    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+    existing_images = post.images.all()
+    images_by_id = {image.id: image for image in existing_images}
+    images_to_delete = [images_by_id[image_id] for image_id in delete_image_ids if image_id in images_by_id]
+    remaining_image_count = len(existing_images) - len(images_to_delete)
+
+    if not title or rent is None or not location:
+        flash("标题、租金和位置为必填项")
+        return render_template("posts/edit.html", post=post, form_data=request.form), 400
+
+    if remaining_image_count + len(uploaded_files) > 6:
+        flash("最多上传6张")
+        return render_template("posts/edit.html", post=post, form_data=request.form), 400
+
+    post.title = title
+    post.rent = rent
+    post.location = location
+    post.nearby_school = (request.form.get("nearby_school") or "").strip() or None
+    post.community_name = (request.form.get("community_name") or "").strip() or None
+    post.layout = (request.form.get("layout") or "").strip() or None
+    post.area = _to_decimal(request.form.get("area"))
+    post.poster_gender = (request.form.get("poster_gender") or "").strip() or None
+    post.poster_age = _to_int(request.form.get("poster_age"))
+    post.poster_occupation_or_school = (
+        (request.form.get("poster_occupation_or_school") or "").strip() or None
+    )
+    post.poster_intro = (request.form.get("poster_intro") or "").strip() or None
+    post.expected_schedule = (request.form.get("expected_schedule") or "").strip() or None
+    post.cleaning_frequency = (request.form.get("cleaning_frequency") or "").strip() or None
+    post.hobbies = _normalize_hobbies(request.form.get("hobbies", ""))
+    post.custom_requirements = (request.form.get("custom_requirements") or "").strip() or None
+
+    for existing_image in images_to_delete:
+        _delete_local_image_file(existing_image.image_url)
+        db.session.delete(existing_image)
+
+    if uploaded_files:
+        upload_folder = current_app.config.get("UPLOAD_FOLDER") or os.path.join(
+            current_app.root_path, "static", "uploads"
+        )
+        os.makedirs(upload_folder, exist_ok=True)
+
+        saved_images = []
+        for file in uploaded_files:
+            filename = secure_filename(file.filename or "")
+            if "." not in filename:
+                flash("只接受jpg/jpeg/png/webp格式")
+                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+
+            ext = filename.rsplit(".", 1)[1].lower()
+            if ext not in allowed_extensions:
+                flash("只接受jpg/jpeg/png/webp格式")
+                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+
+            file.stream.seek(0, os.SEEK_END)
+            file_size = file.stream.tell()
+            file.stream.seek(0)
+            if file_size > 5 * 1024 * 1024:
+                flash("图片太大，请压缩后再上传")
+                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+
+            new_filename = secure_filename(f"{uuid4().hex}.{ext}")
+            save_path = os.path.join(upload_folder, new_filename)
+            file.save(save_path)
+            saved_images.append(f"/static/uploads/{new_filename}")
+
+        remaining_images = [image for image in existing_images if image not in images_to_delete]
+        max_sort_order = max([(image.sort_order or 0) for image in remaining_images], default=-1)
+
+        for offset, image_url in enumerate(saved_images, start=1):
+            db.session.add(
+                PostImage(
+                    post_id=post.id,
+                    image_url=image_url,
+                    sort_order=max_sort_order + offset,
+                )
+            )
+
+    db.session.commit()
+    flash("帖子更新成功")
+    return redirect(url_for("posts.post_detail", post_id=post.id))
 
 
 @posts_bp.route("/posts/<int:post_id>/favorite", methods=["POST"])

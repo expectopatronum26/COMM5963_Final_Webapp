@@ -4,7 +4,15 @@
 
 {% block content %}
 <div class="card">
-    <h2>{{ post.title }}</h2>
+    <div class="post-header">
+        <h2>{{ post.title }}</h2>
+        <div class="post-actions-top">
+            <a class="btn secondary inline" href="/posts/{{ post.id }}/edit">编辑</a>
+            <form method="post" action="/posts/{{ post.id }}/delete" onsubmit="return confirm('确定要删除这个帖子吗？');">
+                <button class="btn danger inline delete-icon-btn" type="submit" aria-label="删除帖子" title="删除帖子">🗑️</button>
+            </form>
+        </div>
+    </div>
     <p class="muted">发布人：<a href="/user/{{ post.user_id }}">{{ post.author.username }}</a> ｜ 发布时间：{{ post.created_at }}</p>
 
     <div id="post-carousel" class="post-carousel">
@@ -67,6 +75,23 @@
 <a href="{{ url_for('posts.list_posts') }}">返回列表</a>
 
 <style>
+    .post-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .post-actions-top {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .post-actions-top form {
+        margin: 0;
+    }
+    .delete-icon-btn {
+        padding: 6px 10px;
+    }
     .post-carousel {
         position: relative;
         width: 100%;
