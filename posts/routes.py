@@ -1,9 +1,11 @@
 import os
 import re
+import secrets
+import hmac
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
-from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from flask import abort, current_app, flash, redirect, render_template, request, session, url_for
 from werkzeug.utils import secure_filename
 
 from models import Favorite, Post, PostImage, ViewHistory, db
@@ -43,6 +45,28 @@ def _normalize_hobbies(value):
     return re.sub(r",+", ",", hobbies_clean).strip(",")
 
 
+def _detect_image_extension(filename, content_type, allowed_suffixes, allowed_content_types):
+    safe_name = secure_filename(filename or "")
+    suffix = os.path.splitext(safe_name)[1].lower()
+    mime = (content_type or "").split(";", 1)[0].strip().lower()
+
+    is_suffix_allowed = suffix in allowed_suffixes
+    is_mime_allowed = mime in allowed_content_types
+    if not (is_suffix_allowed or is_mime_allowed):
+        return None
+
+    if is_suffix_allowed:
+        return suffix
+
+    mime_to_suffix = {
+        "image/jpeg": ".jpg",
+        "image/jpg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+    }
+    return mime_to_suffix.get(mime, ".jpg")
+
+
 def _delete_local_image_file(image_url):
     if not image_url or image_url.startswith("http://") or image_url.startswith("https://"):
         return
@@ -56,6 +80,21 @@ def _delete_local_image_file(image_url):
 
     if os.path.exists(absolute_path):
         os.remove(absolute_path)
+
+
+def _get_csrf_token():
+    token = session.get("_csrf_token")
+    if not token:
+        token = secrets.token_hex(16)
+        session["_csrf_token"] = token
+    return token
+
+
+def _is_valid_csrf_token(submitted_token):
+    saved_token = session.get("_csrf_token")
+    if not saved_token or not submitted_token:
+        return False
+    return hmac.compare_digest(saved_token, submitted_token)
 
 
 @posts_bp.route("/posts")
@@ -132,7 +171,8 @@ def new_post():
             for file in request.files.getlist("images")
             if file and (file.filename or "").strip()
         ]
-        allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+        allowed_suffixes = {".jpg", ".jpeg", ".png", ".webp"}
+        allowed_content_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
 
         if not title or rent is None or not location:
             flash("标题、租金和位置为必填项")
@@ -172,13 +212,15 @@ def new_post():
 
         saved_images = []
         for index, file in enumerate(uploaded_files):
-            filename = secure_filename(file.filename or "")
-            if "." not in filename:
-                flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/new.html", form_data=request.form), 400
+            print(f"[new_post] file.filename={file.filename!r}, file.content_type={file.content_type!r}")
 
-            ext = filename.rsplit(".", 1)[1].lower()
-            if ext not in allowed_extensions:
+            ext = _detect_image_extension(
+                file.filename,
+                file.content_type,
+                allowed_suffixes,
+                allowed_content_types,
+            )
+            if ext is None:
                 flash("只接受jpg/jpeg/png/webp格式")
                 return render_template("posts/new.html", form_data=request.form), 400
 
@@ -190,7 +232,7 @@ def new_post():
                 flash("图片太大，请压缩后再上传")
                 return render_template("posts/new.html", form_data=request.form), 400
 
-            new_filename = secure_filename(f"{uuid4().hex}.{ext}")
+            new_filename = secure_filename(f"{uuid4().hex}{ext}")
             save_path = os.path.join(upload_folder, new_filename)
             file.save(save_path)
             saved_images.append((index, f"/static/uploads/{new_filename}"))
@@ -234,7 +276,11 @@ def edit_post(post_id):
     # TODO: 接入登录系统后，这里需要验证当前用户是否是发帖人
 
     if request.method == "GET":
-        return render_template("posts/edit.html", post=post, form_data={})
+        return render_template("posts/edit.html", post=post, form_data={}, csrf_token=_get_csrf_token())
+
+    submitted_csrf = request.form.get("csrf_token") or request.headers.get("X-CSRFToken")
+    if not _is_valid_csrf_token(submitted_csrf):
+        abort(400, description="CSRF token missing or invalid")
 
     title = (request.form.get("title") or "").strip()
     rent = _to_decimal(request.form.get("rent"))
@@ -249,7 +295,8 @@ def edit_post(post_id):
         for image_id in request.form.getlist("delete_images")
         if (image_id or "").strip().isdigit()
     }
-    allowed_extensions = {"jpg", "jpeg", "png", "webp"}
+    allowed_suffixes = {".jpg", ".jpeg", ".png", ".webp"}
+    allowed_content_types = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
     existing_images = post.images.all()
     images_by_id = {image.id: image for image in existing_images}
     images_to_delete = [images_by_id[image_id] for image_id in delete_image_ids if image_id in images_by_id]
@@ -257,11 +304,11 @@ def edit_post(post_id):
 
     if not title or rent is None or not location:
         flash("标题、租金和位置为必填项")
-        return render_template("posts/edit.html", post=post, form_data=request.form), 400
+        return render_template("posts/edit.html", post=post, form_data=request.form, csrf_token=_get_csrf_token())
 
     if remaining_image_count + len(uploaded_files) > 6:
         flash("最多上传6张")
-        return render_template("posts/edit.html", post=post, form_data=request.form), 400
+        return render_template("posts/edit.html", post=post, form_data=request.form, csrf_token=_get_csrf_token())
 
     post.title = title
     post.rent = rent
@@ -293,24 +340,26 @@ def edit_post(post_id):
 
         saved_images = []
         for file in uploaded_files:
-            filename = secure_filename(file.filename or "")
-            if "." not in filename:
-                flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+            print(f"[edit_post] file.filename={file.filename!r}, file.content_type={file.content_type!r}")
 
-            ext = filename.rsplit(".", 1)[1].lower()
-            if ext not in allowed_extensions:
+            ext = _detect_image_extension(
+                file.filename,
+                file.content_type,
+                allowed_suffixes,
+                allowed_content_types,
+            )
+            if ext is None:
                 flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+                return render_template("posts/edit.html", post=post, form_data=request.form, csrf_token=_get_csrf_token())
 
             file.stream.seek(0, os.SEEK_END)
             file_size = file.stream.tell()
             file.stream.seek(0)
             if file_size > 5 * 1024 * 1024:
                 flash("图片太大，请压缩后再上传")
-                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+                return render_template("posts/edit.html", post=post, form_data=request.form, csrf_token=_get_csrf_token())
 
-            new_filename = secure_filename(f"{uuid4().hex}.{ext}")
+            new_filename = secure_filename(f"{uuid4().hex}{ext}")
             save_path = os.path.join(upload_folder, new_filename)
             file.save(save_path)
             saved_images.append(f"/static/uploads/{new_filename}")
