@@ -9,7 +9,7 @@
         <div class="post-actions-top">
             <a class="btn secondary inline" href="/posts/{{ post.id }}/edit">编辑</a>
             <form method="post" action="/posts/{{ post.id }}/delete" onsubmit="return confirm('确定要删除这个帖子吗？');">
-                <button class="btn danger inline delete-icon-btn" type="submit" aria-label="删除帖子" title="删除帖子">🗑️</button>
+                <button class="btn danger inline delete-icon-btn" type="submit" aria-label="删除帖子" title="删除帖子">删除</button>
             </form>
         </div>
     </div>
@@ -44,11 +44,13 @@
         <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
         <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
         <p><strong>面积（㎡）：</strong>{{ post.area or '-' }}</p>
-        <p style="white-space: pre-line;"><strong>房屋介绍：</strong>{{ post.poster_intro or '-' }}</p>
+        <p><strong>房屋介绍：</strong></p>
+        <p style="white-space: pre-line;">{{ post.poster_intro or '-' }}</p>
         <p><strong>兴趣爱好：</strong>{{ post.hobbies or '-' }}</p>
         <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
         <p><strong>家务分配：</strong>{{ post.cleaning_frequency or '-' }}</p>
-        <p><strong>对室友的期望：</strong>{{ post.custom_requirements or '-' }}</p>
+        <p><strong>对室友的期望：</strong></p>
+        <p style="white-space: pre-line;">{{ post.custom_requirements or '-' }}</p>
     </div>
 
     <div class="actions">
@@ -57,18 +59,12 @@
                 {% if is_favorite %}取消收藏{% else %}收藏{% endif %}
             </button>
         </form>
-        <a class="btn secondary" href="#appointment">预约看房</a>
-        <a class="btn secondary" href="#message">发私信</a>
+        <a class="btn secondary" href="#message">私信</a>
     </div>
 </div>
 
-<div class="card" id="appointment">
-    <h3>预约看房</h3>
-    <p class="muted">这里先预留预约入口，后续可以接 Appointment 模块。</p>
-</div>
-
 <div class="card" id="message">
-    <h3>发私信</h3>
+    <h3>私信</h3>
     <p class="muted">这里先预留私信入口，后续可以接 Message 模块。</p>
 </div>
 
