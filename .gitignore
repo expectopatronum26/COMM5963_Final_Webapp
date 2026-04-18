@@ -1,2 +1,7 @@
 # 忽略.env文件，里面包含敏感信息，如API密钥等
+.idea/
+instance/
+static/uploads/
+__pycache__/
+*.pyc
 .env
