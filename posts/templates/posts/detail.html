@@ -38,13 +38,13 @@
     </div>
 
     <div>
-        <p><strong>租金：</strong>{{ post.rent }}</p>
+        <p><strong>月租：</strong>{{ post.rent }}</p>
         <p><strong>位置：</strong>{{ post.location }}</p>
         <p><strong>附近学校：</strong>{{ post.nearby_school or '-' }}</p>
         <p><strong>小区名称：</strong>{{ post.community_name or '-' }}</p>
         <p><strong>户型：</strong>{{ post.layout or '-' }}</p>
         <p><strong>面积（㎡）：</strong>{{ post.area or '-' }}</p>
-        <p><strong>个人介绍：</strong>{{ post.poster_intro or '-' }}</p>
+        <p style="white-space: pre-line;"><strong>房屋介绍：</strong>{{ post.poster_intro or '-' }}</p>
         <p><strong>兴趣爱好：</strong>{{ post.hobbies or '-' }}</p>
         <p><strong>期望室友作息时间：</strong>{{ post.expected_schedule or '-' }}</p>
         <p><strong>家务分配：</strong>{{ post.cleaning_frequency or '-' }}</p>

@@ -23,8 +23,8 @@
             <label>标题 *
                 <input type="text" name="title" value="{{ title_val }}" placeholder="请输入标题" required>
             </label>
-            <label>租金 *
-                <input type="number" name="rent" min="0" step="1" value="{{ rent_val }}" placeholder="请输入月租金" required>
+            <label>月租 *
+                <input type="number" name="rent" min="0" step="1" value="{{ rent_val }}" placeholder="请输入月租" required>
             </label>
             <label>位置 *
                 <select name="location" required>
@@ -67,7 +67,7 @@
             </label>
         </div>
 
-        <label>个人介绍
+        <label>房屋介绍
             <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ poster_intro_val }}</textarea>
         </label>
         <label>期望室友作息时间

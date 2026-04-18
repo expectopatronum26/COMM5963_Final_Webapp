@@ -113,7 +113,7 @@
             </select>
         </label>
         <div class="filter-row">
-            <span>租金</span>
+            <span>月租</span>
             <button type="button" class="rent-tag {% if filters.min_rent == '' and filters.max_rent == '' %}active{% endif %}" data-min="" data-max="">不限</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '' and filters.max_rent == '3000' %}active{% endif %}" data-min="" data-max="3000">3000以下</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '3000' and filters.max_rent == '5000' %}active{% endif %}" data-min="3000" data-max="5000">3000-5000</button>
@@ -121,10 +121,10 @@
             <button type="button" class="rent-tag {% if filters.min_rent == '8000' and filters.max_rent == '10000' %}active{% endif %}" data-min="8000" data-max="10000">8000-10000</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '10000' and filters.max_rent == '15000' %}active{% endif %}" data-min="10000" data-max="15000">10000-15000</button>
             <button type="button" class="rent-tag {% if filters.min_rent == '15000' and filters.max_rent == '' %}active{% endif %}" data-min="15000" data-max="">15000以上</button>
-            <input id="min-rent" class="rent-input" type="number" step="100" name="custom_min_rent" value="{% if filters.min_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.min_rent }}{% endif %}" placeholder="最低" aria-label="最低租金">
+            <input id="min-rent" class="rent-input" type="number" step="100" name="custom_min_rent" value="{% if filters.min_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.min_rent }}{% endif %}" placeholder="最低" aria-label="最低月租">
             <span>-</span>
-            <input id="max-rent" class="rent-input" type="number" step="100" name="custom_max_rent" value="{% if filters.max_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.max_rent }}{% endif %}" placeholder="最高" aria-label="最高租金">
-            <span>元</span>
+            <input id="max-rent" class="rent-input" type="number" step="100" name="custom_max_rent" value="{% if filters.max_rent and (filters.min_rent, filters.max_rent) not in [('', ''), ('', '3000'), ('3000', '5000'), ('5000', '8000'), ('8000', '10000'), ('10000', '15000'), ('15000', '')] %}{{ filters.max_rent }}{% endif %}" placeholder="最高" aria-label="最高月租">
+            <span>港币</span>
         </div>
         <label>户型
             <input type="text" name="layout" value="{{ filters.layout }}" placeholder="例如：2室1厅">
@@ -280,7 +280,7 @@
                     <img class="list-cover" src="{{ item.cover_url }}" alt="帖子封面">
                 </a>
                 <h3><a href="{{ url_for('posts.post_detail', post_id=item.post.id) }}">{{ item.post.title }}</a></h3>
-                <p>租金：{{ item.post.rent }}</p>
+                <p>月租：{{ item.post.rent }}</p>
                 <p>位置：{{ item.post.location }}</p>
             </div>
         {% endfor %}

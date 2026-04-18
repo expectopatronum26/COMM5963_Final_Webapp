@@ -83,7 +83,7 @@ def _delete_local_image_file(image_url):
 def _serialize_post_for_chat(post):
     parts = [
         f"[ID:{post.id}] {post.title}",
-        f"租金:{post.rent}",
+        f"月租（HKD）:{post.rent}",
         f"地点:{post.location}",
         f"链接:/posts/{post.id}",
     ]
@@ -128,22 +128,26 @@ def _build_context_with_limit(posts, max_chars):
 
 
 def _render_chat_answer_html(answer_text):
+    import markdown
+
     text = answer_text or ""
+    text = re.sub(r'(\S)\n(- )', r'\1\n\n\2', text)
+    rendered_html = markdown.markdown(text)
     reference_pattern = re.compile(
-        r"\[[^\]]*\]\((?:/)?posts/(?P<md_id>\d+)\)"
+        r"<a\b[^>]*\bhref=[\"'](?:/)?posts/(?P<a_id>\d+)[\"'][^>]*>.*?</a>"
         r"|(?P<path>(?:/)?posts/(?P<path_id>\d+))"
         r"|\[ID:(?P<bracket_id>\d+)\]"
         r"|\bID:(?P<id_only>\d+)\b",
-        flags=re.IGNORECASE,
+        flags=re.IGNORECASE | re.DOTALL,
     )
 
     chunks = []
     last_index = 0
-    for match in reference_pattern.finditer(text):
-        chunks.append(escape(text[last_index:match.start()]))
+    for match in reference_pattern.finditer(rendered_html):
+        chunks.append(rendered_html[last_index:match.start()])
 
         post_id = (
-            match.group("md_id")
+            match.group("a_id")
             or match.group("path_id")
             or match.group("bracket_id")
             or match.group("id_only")
@@ -151,8 +155,9 @@ def _render_chat_answer_html(answer_text):
         chunks.append(f'<a href="/posts/{post_id}">点击查看帖子详情</a>')
         last_index = match.end()
 
-    chunks.append(escape(text[last_index:]))
-    return "".join(chunks).replace("\n", "<br>")
+    chunks.append(rendered_html[last_index:])
+    final_html = "".join(chunks)
+    return final_html
 
 
 @posts_bp.route("/posts")
@@ -232,7 +237,7 @@ def new_post():
         allowed_extensions = {"jpg", "jpeg", "png", "webp"}
 
         if not title or rent is None or not location:
-            flash("标题、租金和位置为必填项")
+            flash("标题、月租和位置为必填项")
             return render_template("posts/new.html", form_data=request.form), 400
 
         if len(uploaded_files) > 6:
@@ -269,15 +274,15 @@ def new_post():
 
         saved_images = []
         for index, file in enumerate(uploaded_files):
-            filename = secure_filename(file.filename or "")
-            if "." not in filename:
+            original_filename = file.filename or ""
+            if "." not in original_filename:
                 flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/new.html", form_data=request.form), 400
+                return render_template("posts/new.html", form_data = request.form), 400
 
-            ext = filename.rsplit(".", 1)[1].lower()
+            ext = original_filename.rsplit(".", 1)[1].lower()
             if ext not in allowed_extensions:
                 flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/new.html", form_data=request.form), 400
+                return render_template("posts/new.html", form_data = request.form), 400
 
             # Keep backend validation aligned with frontend constraints.
             file.stream.seek(0, os.SEEK_END)
@@ -353,7 +358,7 @@ def edit_post(post_id):
     remaining_image_count = len(existing_images) - len(images_to_delete)
 
     if not title or rent is None or not location:
-        flash("标题、租金和位置为必填项")
+        flash("标题、月租和位置为必填项")
         return render_template("posts/edit.html", post=post, form_data=request.form), 400
 
     if remaining_image_count + len(uploaded_files) > 6:
@@ -390,15 +395,15 @@ def edit_post(post_id):
 
         saved_images = []
         for file in uploaded_files:
-            filename = secure_filename(file.filename or "")
-            if "." not in filename:
+            original_filename = file.filename or ""
+            if "." not in original_filename:
                 flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+                return render_template("posts/edit.html", form_data = request.form), 400
 
-            ext = filename.rsplit(".", 1)[1].lower()
+            ext = original_filename.rsplit(".", 1)[1].lower()
             if ext not in allowed_extensions:
                 flash("只接受jpg/jpeg/png/webp格式")
-                return render_template("posts/edit.html", post=post, form_data=request.form), 400
+                return render_template("posts/edit.html", form_data = request.form), 400
 
             file.stream.seek(0, os.SEEK_END)
             file_size = file.stream.tell()

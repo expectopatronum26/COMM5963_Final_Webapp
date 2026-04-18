@@ -10,8 +10,8 @@
             <label>标题 *
                 <input type="text" name="title" value="{{ form_data.get('title', '') }}" placeholder="请输入标题" required>
             </label>
-            <label>租金 *
-                <input type="number" name="rent" min="0" step="1" value="{{ form_data.get('rent', '') }}" placeholder="请输入月租金" required>
+            <label>月租 *
+                <input type="number" name="rent" min="0" step="1" value="{{ form_data.get('rent', '') }}" placeholder="请输入月租" required>
             </label>
             <label>位置 *
                 <select name="location" required>
@@ -54,8 +54,8 @@
             </label>
         </div>
 
-        <label>个人介绍
-            <textarea name="poster_intro" rows="4" placeholder="介绍一下自己吧~">{{ form_data.get('poster_intro', '') }}</textarea>
+        <label>房屋介绍
+            <textarea name="poster_intro" rows="4" placeholder="介绍一下房屋情况吧~">{{ form_data.get('poster_intro', '') }}</textarea>
         </label>
         <label>期望室友作息时间
             <input type="text" name="expected_schedule" value="{{ form_data.get('expected_schedule', '') }}" placeholder="例：希望11点前熄灯">

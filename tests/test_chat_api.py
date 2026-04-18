@@ -49,7 +49,7 @@ def test_chat_api_success(client, app, monkeypatch):
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["answer"] == "推荐这套 /posts/1"
-    assert payload["answer_html"] == '推荐这套 <a href="/posts/1">点击查看帖子详情</a>'
+    assert payload["answer_html"] == '<p>推荐这套 <a href="/posts/1">点击查看帖子详情</a></p>'
     assert captured["messages"][1]["role"] == "user"
     assert "/posts/1" in captured["messages"][1]["content"]
 
