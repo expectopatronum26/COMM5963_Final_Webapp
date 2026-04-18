@@ -1,24 +1,26 @@
 import os
 import re
+from html import escape
 from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from flask import abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from werkzeug.utils import secure_filename
 
-from models import Favorite, Post, PostImage, ViewHistory, db
-from . import posts_bp
-
 try:
     from openai import OpenAI
 except ImportError:
     OpenAI = None
 
+from models import Favorite, Post, PostImage, ViewHistory, db
+from . import posts_bp
+
 CURRENT_USER_ID = 1
 DEFAULT_IMAGE_URL = "https://picsum.photos/seed/roommate-default/900/600"
-MAX_CONTEXT_POSTS = 120
-MAX_CONTEXT_CHARS = 12000
-DEEPSEEK_SYSTEM_PROMPT = """你是\"港硕找舍友\"平台的AI搜索助手。
+DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+DEEPSEEK_MODEL = "deepseek-chat"
+MAX_CONTEXT_CHARS = 8000
+AI_SYSTEM_PROMPT = """你是\"港硕找舍友\"平台的AI搜索助手。
 
 你的任务：
 - 根据用户的需求，从提供的房源列表中推荐最匹配的帖子
@@ -63,82 +65,6 @@ def _normalize_hobbies(value):
     return re.sub(r",+", ",", hobbies_clean).strip(",")
 
 
-def _compact_text(value, max_length=80):
-    text = (value or "").strip()
-    if not text:
-        return ""
-    text = re.sub(r"\s+", " ", text)
-    if len(text) <= max_length:
-        return text
-    return f"{text[: max_length - 1]}..."
-
-
-def _build_post_context_line(post):
-    line_parts = [
-        f"[ID:{post.id}] {_compact_text(post.title, 50)}",
-        f"租金:{post.rent}",
-        f"地点:{_compact_text(post.location, 30)}",
-    ]
-
-    optional_fields = [
-        ("附近学校", post.nearby_school),
-        ("小区", post.community_name),
-        ("户型", post.layout),
-        ("面积", post.area),
-        ("发布时间", post.created_at.strftime("%Y-%m-%d") if post.created_at else None),
-        ("性别", post.poster_gender),
-        ("年龄", post.poster_age),
-        ("职业/学校", post.poster_occupation_or_school),
-        ("简介", _compact_text(post.poster_intro, 100)),
-        ("兴趣", _compact_text(post.hobbies, 80)),
-        ("作息", post.expected_schedule),
-        ("清洁频率", post.cleaning_frequency),
-        ("其他要求", _compact_text(post.custom_requirements, 100)),
-    ]
-
-    for field_name, field_value in optional_fields:
-        if field_value not in (None, ""):
-            line_parts.append(f"{field_name}:{field_value}")
-
-    line_parts.append(f"链接:{url_for('posts.post_detail', post_id=post.id)}")
-    return " | ".join(line_parts)
-
-
-def _build_bounded_post_context(posts, max_posts=None, max_chars=None):
-    if not posts:
-        return "当前数据库暂无房源。"
-
-    max_posts = MAX_CONTEXT_POSTS if max_posts is None else max_posts
-    max_chars = MAX_CONTEXT_CHARS if max_chars is None else max_chars
-
-    lines = []
-    used_chars = 0
-    included_count = 0
-
-    for post in posts[:max_posts]:
-        line = _build_post_context_line(post)
-        extra_chars = len(line) + (1 if lines else 0)
-
-        if lines and used_chars + extra_chars > max_chars:
-            break
-
-        if not lines and len(line) > max_chars:
-            lines.append(_compact_text(line, max_chars))
-            used_chars = len(lines[0])
-            included_count = 1
-            break
-
-        lines.append(line)
-        used_chars += extra_chars
-        included_count += 1
-
-    omitted_count = len(posts) - included_count
-    if omitted_count > 0:
-        lines.append(f"...已省略 {omitted_count} 条房源（为控制上下文长度）")
-
-    return "\n".join(lines)
-
-
 def _delete_local_image_file(image_url):
     if not image_url or image_url.startswith("http://") or image_url.startswith("https://"):
         return
@@ -152,6 +78,81 @@ def _delete_local_image_file(image_url):
 
     if os.path.exists(absolute_path):
         os.remove(absolute_path)
+
+
+def _serialize_post_for_chat(post):
+    parts = [
+        f"[ID:{post.id}] {post.title}",
+        f"租金:{post.rent}",
+        f"地点:{post.location}",
+        f"链接:/posts/{post.id}",
+    ]
+    if post.layout:
+        parts.append(f"户型:{post.layout}")
+    if post.nearby_school:
+        parts.append(f"附近学校:{post.nearby_school}")
+    if post.community_name:
+        parts.append(f"小区:{post.community_name}")
+    if post.poster_intro:
+        parts.append(f"简介:{post.poster_intro}")
+    if post.custom_requirements:
+        parts.append(f"要求:{post.custom_requirements}")
+    return " | ".join(parts)
+
+
+def _build_context_with_limit(posts, max_chars):
+    if max_chars <= 0:
+        return ""
+
+    lines = []
+    used_chars = 0
+    omitted_count = 0
+
+    for post in posts:
+        line = _serialize_post_for_chat(post)
+        line_length = len(line) + (1 if lines else 0)
+        if used_chars + line_length > max_chars:
+            omitted_count += 1
+            continue
+        lines.append(line)
+        used_chars += line_length
+
+    context = "\n".join(lines)
+    if omitted_count > 0:
+        suffix = f"\n...已省略{omitted_count}条房源以控制上下文长度"
+        allowed_suffix_len = max_chars - len(context)
+        if allowed_suffix_len > 0:
+            context += suffix[:allowed_suffix_len]
+
+    return context
+
+
+def _render_chat_answer_html(answer_text):
+    text = answer_text or ""
+    reference_pattern = re.compile(
+        r"\[[^\]]*\]\((?:/)?posts/(?P<md_id>\d+)\)"
+        r"|(?P<path>(?:/)?posts/(?P<path_id>\d+))"
+        r"|\[ID:(?P<bracket_id>\d+)\]"
+        r"|\bID:(?P<id_only>\d+)\b",
+        flags=re.IGNORECASE,
+    )
+
+    chunks = []
+    last_index = 0
+    for match in reference_pattern.finditer(text):
+        chunks.append(escape(text[last_index:match.start()]))
+
+        post_id = (
+            match.group("md_id")
+            or match.group("path_id")
+            or match.group("bracket_id")
+            or match.group("id_only")
+        )
+        chunks.append(f'<a href="/posts/{post_id}">点击查看帖子详情</a>')
+        last_index = match.end()
+
+    chunks.append(escape(text[last_index:]))
+    return "".join(chunks).replace("\n", "<br>")
 
 
 @posts_bp.route("/posts")
@@ -195,53 +196,6 @@ def list_posts():
             "layout": layout,
         },
     )
-
-
-@posts_bp.route("/api/chat", methods=["POST"])
-def chat_api():
-    payload = request.get_json(silent=True) or {}
-    user_message = (payload.get("message") or "").strip()
-    if not user_message:
-        return jsonify({"error": "message 不能为空"}), 400
-
-    api_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
-    if not api_key:
-        return jsonify({"error": "服务暂不可用：未配置 DEEPSEEK_API_KEY"}), 500
-
-    if OpenAI is None:
-        return jsonify({"error": "服务暂不可用：缺少 openai 依赖"}), 500
-
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    context_text = _build_bounded_post_context(posts)
-
-    user_prompt = (
-        "以下是数据库中的房源列表（仅可基于这些内容回答）：\n"
-        f"{context_text}\n\n"
-        f"用户需求：{user_message}\n"
-        "请严格依据上述房源内容推荐。"
-    )
-
-    try:
-        client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com/v1")
-        completion = client.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": DEEPSEEK_SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-        )
-    except Exception:
-        current_app.logger.exception("DeepSeek chat request failed")
-        return jsonify({"error": "AI 服务调用失败，请稍后重试"}), 502
-
-    answer = ""
-    if completion.choices:
-        answer = (completion.choices[0].message.content or "").strip()
-    if not answer:
-        answer = "暂时没有找到可推荐的结果，请换个说法试试。"
-
-    return jsonify({"answer": answer})
 
 
 @posts_bp.route("/posts/<int:post_id>")
@@ -490,3 +444,49 @@ def toggle_favorite(post_id):
 
     db.session.commit()
     return redirect(url_for("posts.post_detail", post_id=post.id))
+
+
+@posts_bp.route("/api/chat", methods=["POST"])
+def chat_api():
+    payload = request.get_json(silent=True) or {}
+    message = (payload.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "message不能为空"}), 400
+
+    if OpenAI is None:
+        return jsonify({"error": "openai依赖未安装"}), 500
+
+    api_key = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+    if not api_key:
+        return jsonify({"error": "DEEPSEEK_API_KEY未配置"}), 500
+
+    posts = Post.query.order_by(Post.created_at.desc()).all()
+    listings_context = _build_context_with_limit(posts, MAX_CONTEXT_CHARS)
+    if not listings_context:
+        listings_context = "当前数据库中暂无房源。"
+
+    user_prompt = (
+        "用户需求:\n"
+        f"{message}\n\n"
+        "房源列表(仅可基于以下内容回答):\n"
+        f"{listings_context}"
+    )
+
+    try:
+        client = OpenAI(base_url=DEEPSEEK_BASE_URL, api_key=api_key)
+        completion = client.chat.completions.create(
+            model=DEEPSEEK_MODEL,
+            messages=[
+                {"role": "system", "content": AI_SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        answer = (completion.choices[0].message.content or "").strip()
+        answer_html = _render_chat_answer_html(answer)
+    except Exception:
+        current_app.logger.exception("DeepSeek chat completion failed")
+        return jsonify({"error": "AI服务暂时不可用，请稍后再试"}), 502
+
+    return jsonify({"answer": answer, "answer_html": answer_html})
+
+

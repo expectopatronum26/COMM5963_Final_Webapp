@@ -47,7 +47,9 @@ def test_chat_api_success(client, app, monkeypatch):
     response = client.post("/api/chat", json={"message": "我想找3000左右两室"})
 
     assert response.status_code == 200
-    assert response.get_json()["answer"] == "推荐这套 /posts/1"
+    payload = response.get_json()
+    assert payload["answer"] == "推荐这套 /posts/1"
+    assert payload["answer_html"] == '推荐这套 <a href="/posts/1">点击查看帖子详情</a>'
     assert captured["messages"][1]["role"] == "user"
     assert "/posts/1" in captured["messages"][1]["content"]
 

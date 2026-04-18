@@ -18,6 +18,7 @@ if load_dotenv:
 
 db_path = Path(app.instance_path) / 'flaskproject.db'
 db_path.parent.mkdir(parents=True, exist_ok=True)
+print(f"📁 数据库路径: {db_path}")
 
 # SQLite itself has no charset setting; using an explicit file path avoids
 # accidentally creating/reading a different database on Windows.

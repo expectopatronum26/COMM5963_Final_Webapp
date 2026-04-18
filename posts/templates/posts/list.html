@@ -4,6 +4,52 @@
 
 {% block content %}
 <style>
+    .ai-assistant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+    .ai-assistant-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-top: 12px;
+    }
+    .ai-assistant-form input {
+        margin-top: 0;
+        flex: 1;
+    }
+    .ai-assistant-counter {
+        margin-top: 6px;
+        font-size: 12px;
+    }
+    .ai-assistant-result {
+        margin-top: 12px;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+    }
+    .ai-assistant-result[hidden] {
+        display: none;
+    }
+    .ai-assistant-result-toggle {
+        border: 0;
+        background: transparent;
+        color: #0b63ce;
+        cursor: pointer;
+        padding: 0;
+    }
+    .ai-assistant-content p {
+        margin: 8px 0;
+    }
+    .ai-assistant-content ul,
+    .ai-assistant-content ol {
+        margin: 8px 0;
+        padding-left: 20px;
+    }
+    .ai-assistant-error {
+        color: #b00020;
+    }
     .filter-row {
         grid-column: 1 / -1;
         display: flex;
@@ -23,48 +69,23 @@
         flex: 0 1 5em;
         min-width: 3em;
     }
-    .ai-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-    .ai-row input {
-        margin-top: 0;
-        flex: 1;
-    }
-    .ai-answer {
-        margin-top: 12px;
-    }
-    .ai-answer summary {
-        cursor: pointer;
-        color: #444;
-    }
-    .ai-answer-content {
-        margin-top: 10px;
-        line-height: 1.6;
-    }
-    .ai-answer-content p,
-    .ai-answer-content ul,
-    .ai-answer-content ol {
-        margin: 0 0 8px;
-    }
-    .ai-answer-content code {
-        background: #f4f4f4;
-        padding: 1px 4px;
-        border-radius: 4px;
-    }
 </style>
-<div class="card">
-    <h3 style="margin-top: 0;">AI 搜索助手</h3>
-    <form id="ai-chat-form" class="ai-row">
-        <input id="ai-chat-input" type="text" placeholder="比如：我想找旺角附近3000以下的两室房" aria-label="AI搜索输入">
-        <button id="ai-chat-send" class="btn" type="submit">发送</button>
+
+<div class="card" id="ai-assistant-card">
+    <div class="ai-assistant-header">
+        <h3 style="margin: 0;">AI 搜索助手</h3>
+    </div>
+    <form id="ai-assistant-form" class="ai-assistant-form" novalidate>
+        <input id="ai-assistant-input" type="text" maxlength="200" placeholder="例如：我想找旺角附近3000以下的两室房" aria-label="AI搜索输入">
+        <button id="ai-assistant-submit" class="btn" type="submit">发送</button>
     </form>
-    <details id="ai-answer-box" class="ai-answer" hidden>
-        <summary>AI 回答（点击展开/收起）</summary>
-        <div id="ai-answer-content" class="ai-answer-content"></div>
-    </details>
+    <div id="ai-assistant-counter" class="ai-assistant-counter muted">已输入 0/200 字</div>
+    <div id="ai-assistant-result" class="ai-assistant-result" hidden>
+        <button id="ai-assistant-toggle" type="button" class="ai-assistant-result-toggle" aria-expanded="true">收起回答</button>
+        <div id="ai-assistant-content" class="ai-assistant-content" style="margin-top: 8px;"></div>
+    </div>
 </div>
+
 <div class="card">
     <form id="filter-form" method="get" action="{{ url_for('posts.list_posts') }}" class="grid grid-2">
         <input type="hidden" id="hidden-min-rent" name="min_rent" value="{{ filters.min_rent }}">
@@ -115,21 +136,21 @@
     </form>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js"></script>
 <script>
     (function () {
+        var aiForm = document.getElementById("ai-assistant-form");
+        var aiInput = document.getElementById("ai-assistant-input");
+        var aiSubmit = document.getElementById("ai-assistant-submit");
+        var aiResult = document.getElementById("ai-assistant-result");
+        var aiToggle = document.getElementById("ai-assistant-toggle");
+        var aiContent = document.getElementById("ai-assistant-content");
+        var aiCounter = document.getElementById("ai-assistant-counter");
         var form = document.getElementById("filter-form");
         var hiddenMinInput = document.getElementById("hidden-min-rent");
         var hiddenMaxInput = document.getElementById("hidden-max-rent");
         var minInput = document.getElementById("min-rent");
         var maxInput = document.getElementById("max-rent");
         var tags = document.querySelectorAll(".rent-tag");
-        var aiForm = document.getElementById("ai-chat-form");
-        var aiInput = document.getElementById("ai-chat-input");
-        var aiSendButton = document.getElementById("ai-chat-send");
-        var aiAnswerBox = document.getElementById("ai-answer-box");
-        var aiAnswerContent = document.getElementById("ai-answer-content");
 
         function setActive(target) {
             tags.forEach(function (tag) {
@@ -166,109 +187,87 @@
             }
         });
 
-        function setAiLoading(isLoading) {
-            aiInput.disabled = isLoading;
-            aiSendButton.disabled = isLoading;
-            aiSendButton.textContent = isLoading ? "发送中..." : "发送";
-        }
-
-        function hardenRenderedLinks(html) {
-            var template = document.createElement("template");
-            template.innerHTML = html;
-            var anchors = template.content.querySelectorAll("a");
-
-            anchors.forEach(function (anchor) {
-                var href = (anchor.getAttribute("href") || "").trim();
-                var isPostPath = /^\/posts\/\d+$/.test(href);
-                var isHttpLink = /^https?:\/\//i.test(href);
-
-                if (isPostPath) {
-                    return;
-                }
-
-                if (isHttpLink) {
-                    anchor.setAttribute("target", "_blank");
-                    anchor.setAttribute("rel", "noopener noreferrer nofollow");
-                    return;
-                }
-
-                // Drop unsafe protocols such as javascript:, data:, vbscript:, etc.
-                var linkText = document.createTextNode(anchor.textContent || "");
-                anchor.replaceWith(linkText);
-            });
-
-            return template.innerHTML;
-        }
-
-        function renderAiAnswer(rawText) {
-            var escapedText = (rawText || "")
+        function escapeHtml(value) {
+            return String(value)
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
+                .replace(/\"/g, "&quot;")
                 .replace(/'/g, "&#39;");
+        }
 
-            var markdownWithLinks = escapedText.replace(/\/posts\/\d+/g, function (path) {
-                return "[" + path + "](" + path + ")";
-            });
+        function updateAssistantCounter() {
+            var value = aiInput.value || "";
+            if (value.length > 200) {
+                value = value.slice(0, 200);
+                aiInput.value = value;
+            }
+            aiCounter.textContent = "已输入 " + value.length + "/200 字";
+        }
 
-            if (window.marked && typeof window.marked.parse === "function") {
-                var parsedHtml = window.marked.parse(markdownWithLinks, {
-                    gfm: true,
-                    breaks: true,
-                });
+        function setAssistantLoading(isLoading) {
+            aiSubmit.disabled = isLoading;
+            aiSubmit.textContent = isLoading ? "发送中..." : "发送";
+        }
 
-                if (window.DOMPurify && typeof window.DOMPurify.sanitize === "function") {
-                    parsedHtml = window.DOMPurify.sanitize(parsedHtml, {
-                        USE_PROFILES: { html: true },
-                    });
-                }
-
-                aiAnswerContent.innerHTML = hardenRenderedLinks(parsedHtml);
+        function showAssistantText(content, isError, isHtml) {
+            aiResult.hidden = false;
+            aiToggle.setAttribute("aria-expanded", "true");
+            aiToggle.textContent = "收起回答";
+            aiContent.style.display = "block";
+            aiContent.classList.toggle("ai-assistant-error", Boolean(isError));
+            if (isError) {
+                aiContent.innerHTML = "<p>" + escapeHtml(content) + "</p>";
                 return;
             }
-
-            aiAnswerContent.textContent = rawText || "";
+            aiContent.innerHTML = isHtml ? (content || "") : "<p>" + escapeHtml(content) + "</p>";
         }
+
+        aiToggle.addEventListener("click", function () {
+            var expanded = aiToggle.getAttribute("aria-expanded") === "true";
+            aiToggle.setAttribute("aria-expanded", String(!expanded));
+            aiToggle.textContent = expanded ? "展开回答" : "收起回答";
+            aiContent.style.display = expanded ? "none" : "block";
+        });
 
         aiForm.addEventListener("submit", function (event) {
             event.preventDefault();
-            var message = aiInput.value.trim();
+            var message = (aiInput.value || "").trim();
             if (!message) {
+                showAssistantText("请输入找房需求后再发送。", true, false);
                 return;
             }
 
-            setAiLoading(true);
-            fetch("{{ url_for('posts.chat_api') }}", {
+            setAssistantLoading(true);
+            fetch("/api/chat", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ message: message })
+                body: JSON.stringify({ message: message }),
             })
                 .then(function (response) {
                     return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
+                        if (!response.ok) {
+                            var errorMessage = (data && data.error) || "AI助手暂时不可用，请稍后再试。";
+                            throw new Error(errorMessage);
+                        }
+                        return data;
                     });
                 })
-                .then(function (result) {
-                    if (!result.ok) {
-                        throw new Error(result.data.error || "AI 请求失败，请稍后重试");
-                    }
-
-                    renderAiAnswer(result.data.answer || "暂无可展示的回答");
-                    aiAnswerBox.hidden = false;
-                    aiAnswerBox.open = true;
+                .then(function (data) {
+                    showAssistantText((data && data.answer_html) || (data && data.answer) || "没有收到AI回答，请稍后再试。", false, Boolean(data && data.answer_html));
                 })
                 .catch(function (error) {
-                    renderAiAnswer(error.message);
-                    aiAnswerBox.hidden = false;
-                    aiAnswerBox.open = true;
+                    showAssistantText(error.message || "AI助手暂时不可用，请稍后再试。", true, false);
                 })
                 .finally(function () {
-                    setAiLoading(false);
+                    setAssistantLoading(false);
                 });
         });
+
+        aiInput.addEventListener("input", updateAssistantCounter);
+        updateAssistantCounter();
 
     })();
 </script>
@@ -290,3 +289,7 @@
     <div class="card">暂无帖子</div>
 {% endif %}
 {% endblock %}
+
+
+
+
